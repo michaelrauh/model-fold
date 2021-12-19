@@ -1,7 +1,7 @@
 pub fn clean_sentences(sentences: String) -> Vec<Vec<String>> {
 
     sentences
-        .split(&['.', '!', '?'][..])
+        .split(|x| x == '.' || x == '!' || x == '?')
         .filter(|x| !x.is_empty())
         .map(|sentence| {
             sentence
@@ -22,7 +22,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_1() {
+    fn test_clean_produces_a_vector_of_sentences() {
         assert_eq!(
             clean_sentences("A \n\tb ,; ' : c? D   e! F g.".to_string()),
             vec!(
