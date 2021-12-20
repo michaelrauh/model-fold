@@ -1,4 +1,6 @@
+use std::collections::HashMap;
 use std::collections::HashSet;
+use std::slice::Windows;
 
 pub fn clean_sentences(sentences: String) -> Vec<Vec<String>> {
     sentences
@@ -25,6 +27,23 @@ fn make_vocabulary(sentences: String) -> HashSet<String> {
         .collect::<Vec<HashSet<String>>>()
         .iter()
         .fold(HashSet::new(), |acc, x| acc.union(x).cloned().collect())
+}
+
+fn make_forward<'a>(sentences: String) -> HashMap<&'a str, HashSet<&'a str>> {
+    let other_sentences = sentences.clone();
+    let cleaned = clean_sentences(sentences);
+    let vocabulary = make_vocabulary(other_sentences);
+
+    let better = to_sliding_tuples(cleaned);
+    HashMap::new()
+}
+
+fn to_sliding_tuples(sentences: Vec<Vec<String>>) -> Vec<(String, String)> {
+    sentences.iter().map(|sentence| { window_tuples(sentence.to_vec()) }).flatten().collect()
+}
+
+fn window_tuples(sentence: Vec<String>) -> Vec<(String, String)> {
+    sentence.windows(2).map(|pair| (pair[0].clone(), pair[1].clone())).collect()
 }
 
 #[cfg(test)]
