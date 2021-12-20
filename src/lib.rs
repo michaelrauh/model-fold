@@ -19,11 +19,10 @@ pub fn clean_sentences(sentences: String) -> Vec<Vec<String>> {
 }
 
 fn make_vocabulary(sentences: String) -> HashSet<String> {
-    let hashes: Vec<HashSet<String>> = clean_sentences(sentences)
+    clean_sentences(sentences)
         .iter()
         .map(|x| x.iter().cloned().collect())
-        .collect();
-    hashes
+        .collect::<Vec<HashSet<String>>>()
         .iter()
         .fold(HashSet::new(), |acc, x| acc.union(x).cloned().collect())
 }
