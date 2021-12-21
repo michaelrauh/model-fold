@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::slice::Windows;
 
-pub fn clean_sentences(sentences: String) -> Vec<Vec<String>> {
+fn clean_sentences(sentences: String) -> Vec<Vec<String>> {
     sentences
         .split(|x| x == '.' || x == '!' || x == '?')
         .filter(|x| !x.is_empty())
@@ -20,8 +19,8 @@ pub fn clean_sentences(sentences: String) -> Vec<Vec<String>> {
         .collect()
 }
 
-fn make_vocabulary(sentences: String) -> HashSet<String> {
-    clean_sentences(sentences)
+fn make_vocabulary(cleaned: &Vec<Vec<String>>) -> HashSet<String> {
+    cleaned
         .iter()
         .map(|x| x.iter().cloned().collect())
         .collect::<Vec<HashSet<String>>>()
@@ -29,21 +28,35 @@ fn make_vocabulary(sentences: String) -> HashSet<String> {
         .fold(HashSet::new(), |acc, x| acc.union(x).cloned().collect())
 }
 
-fn make_forward<'a>(sentences: String) -> HashMap<&'a str, HashSet<&'a str>> {
-    let other_sentences = sentences.clone();
-    let cleaned = clean_sentences(sentences);
-    let vocabulary = make_vocabulary(other_sentences);
+fn make_forward<'a>(
+    cleaned: &'a Vec<Vec<String>>,
+    vocabulary: &'a HashSet<String>,
+) -> HashMap<&'a str, HashSet<&'a str>> {
 
-    let better = to_sliding_tuples(cleaned);
-    HashMap::new()
+    let mut acc = HashMap::new();
+    for cur in to_sliding_tuples(cleaned) {
+        let (f, s) = cur;
+        let ref_f: &str = vocabulary.get(&f).unwrap();
+        let ref_s: &str = vocabulary.get(&s).unwrap();
+        let seconds = acc.entry(ref_f).or_insert(HashSet::new());
+        seconds.insert(ref_s);
+    }
+    acc
 }
 
-fn to_sliding_tuples(sentences: Vec<Vec<String>>) -> Vec<(String, String)> {
-    sentences.iter().map(|sentence| { window_tuples(sentence.to_vec()) }).flatten().collect()
+fn to_sliding_tuples(sentences: &Vec<Vec<String>>) -> Vec<(String, String)> {
+    sentences
+        .iter()
+        .map(|sentence| window_tuples(sentence.to_vec()))
+        .flatten()
+        .collect()
 }
 
 fn window_tuples(sentence: Vec<String>) -> Vec<(String, String)> {
-    sentence.windows(2).map(|pair| (pair[0].clone(), pair[1].clone())).collect()
+    sentence
+        .windows(2)
+        .map(|pair| (pair[0].clone(), pair[1].clone()))
+        .collect()
 }
 
 #[cfg(test)]
@@ -65,7 +78,11 @@ mod tests {
     #[test]
     fn make_vocabulary_makes_a_set_of_all_words() {
         assert_eq!(
-            make_vocabulary("a b. c d. b c.".to_string()),
+            make_vocabulary(&vec!(
+                vec!("a".to_string(), "b".to_string(), "b".to_string()),
+                vec!("c".to_string(), "d".to_string()),
+                vec!("c".to_string(), "d".to_string())
+            )),
             [
                 "a".to_string(),
                 "b".to_string(),
