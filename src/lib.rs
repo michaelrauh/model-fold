@@ -44,6 +44,40 @@ fn make_forward<'a>(
     acc
 }
 
+struct Config<'a> {
+    vocabulary: HashSet<String>,
+    forward: HashMap<&'a str, HashSet<&'a str>>,
+    backward: HashMap<&'a str, HashSet<&'a str>>,
+}
+
+pub fn make_config<'a>(text: String) -> Config<'a> {
+    let cleaned: Vec<Vec<String>> = clean_sentences(text);
+    let vocabulary: HashSet<String> = make_vocabulary(&cleaned);
+    let forward: HashMap<&'a str, HashSet<&'a str>> = make_forward(&cleaned, &vocabulary);
+    let backward: HashMap<&'a str, HashSet<&'a str>> = make_forward(&cleaned, &vocabulary);
+    Config {
+        vocabulary: vocabulary,
+        forward: forward,
+        backward: backward,
+    }
+}
+
+fn make_backward<'a>(
+    cleaned: &'a Vec<Vec<String>>,
+    vocabulary: &'a HashSet<String>,
+) -> HashMap<&'a str, HashSet<&'a str>> {
+
+    let mut acc = HashMap::new();
+    for cur in to_sliding_tuples(cleaned) {
+        let (f, s) = cur;
+        let ref_f: &str = vocabulary.get(&f).unwrap();
+        let ref_s: &str = vocabulary.get(&s).unwrap();
+        let firsts = acc.entry(ref_s).or_insert(HashSet::new());
+        firsts.insert(ref_f);
+    }
+    acc
+}
+
 fn to_sliding_tuples(sentences: &Vec<Vec<String>>) -> Vec<(String, String)> {
     sentences
         .iter()
