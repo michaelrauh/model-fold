@@ -94,7 +94,7 @@ mod tests {
         let config = Config::new("a b. c d. a c. b d.".to_string());
         assert_eq!(
             config.project_forward("a").unwrap(),
-            &hashset!{"b".to_string(), "c".to_string()}
+            &hashset! {"b".to_string(), "c".to_string()}
         );
     }
 
@@ -103,7 +103,7 @@ mod tests {
         let config = Config::new("a b. c d. a c. b d.".to_string());
         assert_eq!(
             config.project_backward("b").unwrap(),
-            &hashset!{"a".to_string()}
+            &hashset! {"a".to_string()}
         );
     }
 }
