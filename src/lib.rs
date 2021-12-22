@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
+#[macro_use]
+extern crate maplit;
 
 fn clean_sentences(sentences: String) -> Vec<Vec<String>> {
     sentences
@@ -19,28 +21,89 @@ fn clean_sentences(sentences: String) -> Vec<Vec<String>> {
         .collect()
 }
 
-struct Config<'a> {
+struct Config {
     vocabulary: HashSet<String>,
-    forward: HashMap<&'a str, HashSet<&'a str>>,
-    backward: HashMap<&'a str, HashSet<&'a str>>,
+    forward: HashMap<String, HashSet<String>>,
+    backward: HashMap<String, HashSet<String>>,
 }
 
-fn add_sentence<'a>(config: &'a mut Config, sentence: Vec<String>) {
-    for index in 0..sentence.len() - 1 {
-       add_entry(config, sentence[index].clone(), sentence[index + 1].clone());
+impl Config {
+    pub fn project_forward(&self, word: &str) -> Option<&HashSet<String>> {
+        self.forward.get(word)
+    }
+
+    pub fn project_backward(&self, word: &str) -> Option<&HashSet<String>> {
+        self.backward.get(word)
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &String> {
+        self.vocabulary.iter()
+    }
+
+    pub fn new(input: String) -> Config {
+        let sentences = clean_sentences(input);
+
+        let mut vocabulary = HashSet::new();
+        let mut forward = HashMap::new();
+        let mut backward = HashMap::new();
+
+        for sentence in sentences {
+            for word in sentence.clone() {
+                vocabulary.insert(word.clone());
+            }
+
+            for i in 0..sentence.len() - 1 {
+                let word = &sentence[i];
+                let next_word = &sentence[i + 1];
+
+                forward
+                    .entry(word.clone())
+                    .or_insert_with(HashSet::new)
+                    .insert(next_word.clone());
+
+                backward
+                    .entry(next_word.clone())
+                    .or_insert_with(HashSet::new)
+                    .insert(word.clone());
+            }
+        }
+
+        Config {
+            vocabulary,
+            forward,
+            backward,
+        }
     }
 }
 
-fn add_entry<'a>(config: &'a mut Config, word: String, next_word: String) {
-    add_to_mapping(& mut config.forward, &word, &next_word);
-    // add_to_mapping(& mut config.backward, &next_word, &word);
-    config.vocabulary.insert(word);
-    config.vocabulary.insert(next_word);
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn it_iterates() {
+        let config = Config::new("a b. c d. a c. b d.".to_string());
+        assert_eq!(config.vocabulary.len(), 4);
+        assert_eq!(config.iter().collect::<Vec<_>>().len(), 4);
+        for word in config.iter() {
+            assert!(config.vocabulary.contains(word));
+        }
+    }
 
-fn add_to_mapping<'a>(mapping: &'a mut HashMap<&'a str, HashSet<&'a str>>, key: &'a str, value: &'a str) {
-    mapping
-        .entry(key)
-        .or_insert(HashSet::new())
-        .insert(value);
+    #[test]
+    fn it_projects_forward() {
+        let config = Config::new("a b. c d. a c. b d.".to_string());
+        assert_eq!(
+            config.project_forward("a").unwrap(),
+            &hashset!{"b".to_string(), "c".to_string()}
+        );
+    }
+
+    #[test]
+    fn it_projects_backward() {
+        let config = Config::new("a b. c d. a c. b d.".to_string());
+        assert_eq!(
+            config.project_backward("b").unwrap(),
+            &hashset!{"a".to_string()}
+        );
+    }
 }
