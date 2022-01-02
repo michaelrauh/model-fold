@@ -19,6 +19,27 @@ fn clean_sentences(sentences: String) -> Vec<Vec<String>> {
         .collect()
 }
 
+// enum Trie {
+//     Cons(HashMap<u64, Box<Trie>>),
+//     Nil,
+// }
+
+// struct Trie {
+//     Cons: HashMap<u64, Trie>,
+// }
+
+enum Trie {
+    Cons(HashMap<u64, Trie>)
+}
+
+fn foo() {
+    let mut bar = HashMap::new();
+    let to_insert: Trie = Trie::Cons(HashMap::default());
+    bar.insert(1, to_insert);
+}
+
+// todo: use string interning on everything. Then use an intmap to hold them, with a no-hash hasher. 
+
 pub struct Config {
     vocabulary: HashSet<String>,
     forward: HashMap<String, HashSet<String>>,
