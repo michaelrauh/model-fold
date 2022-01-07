@@ -1,4 +1,4 @@
-extern crate maplit;
+#[macro_use] extern crate maplit;
 
 mod config;
 pub use config::Config;

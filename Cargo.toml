@@ -7,3 +7,5 @@ edition = "2018"
 
 [dependencies]
 maplit = "1.0.2"
+string-interner = "0.13.0"
+nohash-hasher = "0.2.0"
