@@ -1,7 +1,7 @@
-use string_interner::StringInterner;
-use string_interner::Symbol;
 use nohash_hasher::IntMap;
 use nohash_hasher::IntSet;
+use string_interner::StringInterner;
+use string_interner::Symbol;
 
 pub fn clean_sentences(sentences: String, interner: &mut StringInterner) -> Vec<Vec<usize>> {
     sentences
@@ -21,31 +21,29 @@ pub fn clean_sentences(sentences: String, interner: &mut StringInterner) -> Vec<
                 .collect()
         })
         .collect()
-
 }
 
-// enum Trie {
-//     Cons(HashMap<usize, Box<Trie>>),
-//     Nil,
-// }
-
-// struct Trie {
-//     Cons: HashMap<usize, Trie>,
-// }
-
-enum Trie {
-    Cons(IntMap<usize, Trie>)
+#[derive(Debug, PartialEq)]
+pub struct Trie {
+    get: IntMap<usize, Trie>,
 }
 
-fn foo() {
-    let mut bar = IntMap::default();
-    let to_insert: Trie = Trie::Cons(IntMap::default());
-    bar.insert(1, to_insert);
+impl Trie {
+    pub fn phrase_hop(&self, word: usize) -> Option<&Trie> {
+        self.get.get(&word)
+    }
+
+    fn new() -> Trie {
+        Trie {
+            get: IntMap::default(),
+        }
+    }
 }
 pub struct Config {
     vocabulary: IntSet<usize>,
     forward: IntMap<usize, IntSet<usize>>,
     backward: IntMap<usize, IntSet<usize>>,
+    phrases: Trie,
 }
 
 impl Config {
@@ -61,10 +59,17 @@ impl Config {
         self.vocabulary.iter()
     }
 
+    pub fn get_phrases(&self) -> &Trie {
+        &self.phrases
+    }
+
+    // todo: when saving these in a DB or merging them, beware that interning is inconistent (rebuild interning or rebuild config)
     pub fn new(sentences: Vec<Vec<usize>>) -> Config {
+        println!("Building config...");
         let mut vocabulary = IntSet::default();
         let mut forward = IntMap::default();
         let mut backward = IntMap::default();
+        let mut phrases = Trie::new();
 
         for sentence in sentences {
             for word in sentence.clone() {
@@ -72,25 +77,44 @@ impl Config {
             }
 
             for i in 0..sentence.len() - 1 {
-                let word = *&sentence[i].to_usize() as usize;
-                let next_word = *&sentence[i + 1].to_usize() as usize;
+                let word = sentence[i];
+                let next_word = sentence[i + 1];
 
                 forward
-                    .entry(word.clone())
+                    .entry(word)
                     .or_insert_with(IntSet::default)
-                    .insert(next_word.clone());
+                    .insert(next_word);
 
                 backward
-                    .entry(next_word.clone())
+                    .entry(next_word)
                     .or_insert_with(IntSet::default)
-                    .insert(word.clone());
+                    .insert(word);
+            }
+
+            let mut current_trie = &mut phrases;
+            for i in (0..(sentence.len() - 1)).rev() {
+                let word = sentence[i];
+                let next_word = sentence[i + 1];
+                println!("{} {}", word, next_word);
+
+                current_trie
+                    .get
+                    .entry(word)
+                    .or_insert_with(|| Trie::new())
+                    .get
+                    .entry(next_word)
+                    .or_insert_with(|| Trie::new());
+
+                current_trie = current_trie.get.get_mut(&word).unwrap();
+                println!("{:?}", current_trie);
             }
         }
-
+        println!("{:?}", phrases);
         Config {
             vocabulary,
             forward,
             backward,
+            phrases,
         }
     }
 }
@@ -117,16 +141,22 @@ mod tests {
         let mut interner = StringInterner::default();
         let sentences = clean_sentences(raw, &mut interner);
         let config = Config::new(sentences);
-        assert!(
-            config.project_forward(interner.get("a").unwrap().to_usize()).unwrap().contains(&interner.get("b").unwrap().to_usize())
-        );
+        assert!(config
+            .project_forward(interner.get("a").unwrap().to_usize())
+            .unwrap()
+            .contains(&interner.get("b").unwrap().to_usize()));
 
-        assert!(
-            config.project_forward(interner.get("a").unwrap().to_usize()).unwrap().contains(&interner.get("c").unwrap().to_usize())
-        );
+        assert!(config
+            .project_forward(interner.get("a").unwrap().to_usize())
+            .unwrap()
+            .contains(&interner.get("c").unwrap().to_usize()));
 
         assert_eq!(
-            config.project_forward(interner.get("a").unwrap().to_usize()).unwrap().len(), 2
+            config
+                .project_forward(interner.get("a").unwrap().to_usize())
+                .unwrap()
+                .len(),
+            2
         );
     }
 
@@ -136,12 +166,31 @@ mod tests {
         let mut interner = StringInterner::default();
         let sentences = clean_sentences(raw, &mut interner);
         let config = Config::new(sentences);
-        assert!(
-            config.project_backward(interner.get("b").unwrap().to_usize()).unwrap().contains(&interner.get("a").unwrap().to_usize())
-        );
+        assert!(config
+            .project_backward(interner.get("b").unwrap().to_usize())
+            .unwrap()
+            .contains(&interner.get("a").unwrap().to_usize()));
 
         assert_eq!(
-            config.project_backward(interner.get("b").unwrap().to_usize()).unwrap().len(), 1
+            config
+                .project_backward(interner.get("b").unwrap().to_usize())
+                .unwrap()
+                .len(),
+            1
         );
+    }
+
+    #[test]
+    fn it_hops_phrases_backward() {
+        let raw = "a b. c d. a c. b d.".to_string();
+        let mut interner = StringInterner::default();
+        let sentences = clean_sentences(raw, &mut interner);
+        let config = Config::new(sentences);
+        assert!(config
+            .get_phrases()
+            .phrase_hop(interner.get("b").unwrap().to_usize())
+            .unwrap()
+            .phrase_hop(interner.get("a").unwrap().to_usize())
+            .is_none());
     }
 }
