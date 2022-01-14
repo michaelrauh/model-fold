@@ -43,7 +43,8 @@ pub struct Config {
     vocabulary: IntSet<usize>,
     forward: IntMap<usize, IntSet<usize>>,
     backward: IntMap<usize, IntSet<usize>>,
-    phrases: Trie,
+    backward_phrases: Trie,
+    forward_phrases: Trie,
 }
 
 impl Config {
@@ -59,26 +60,28 @@ impl Config {
         self.vocabulary.iter()
     }
 
-    pub fn get_phrases(&self) -> &Trie {
-        &self.phrases
+    pub fn get_backward_phrases(&self) -> &Trie {
+        &self.backward_phrases
+    }
+
+    pub fn get_forward_phrases(&self) -> &Trie {
+        &self.forward_phrases
     }
 
     // todo: when saving these in a DB or merging them, beware that interning is inconistent (rebuild interning or rebuild config)
     pub fn new(sentences: Vec<Vec<usize>>) -> Config {
-        println!("Building config...");
         let mut vocabulary = IntSet::default();
         let mut forward = IntMap::default();
         let mut backward = IntMap::default();
-        let mut phrases = Trie::new();
+        let mut backward_phrases = Trie::new();
+        let mut forward_phrases = Trie::new();
 
         for sentence in sentences {
-            for word in sentence.clone() {
-                vocabulary.insert(word);
-            }
-
             for i in 0..sentence.len() - 1 {
                 let word = sentence[i];
                 let next_word = sentence[i + 1];
+                vocabulary.insert(word);
+                vocabulary.insert(next_word);
 
                 forward
                     .entry(word)
@@ -91,11 +94,10 @@ impl Config {
                     .insert(word);
             }
 
-            let mut current_trie = &mut phrases;
-            for i in (0..(sentence.len() - 1)).rev() {
+            let mut current_trie = &mut backward_phrases;
+            for i in (1..(sentence.len())).rev() {
                 let word = sentence[i];
-                let next_word = sentence[i + 1];
-                println!("{} {}", word, next_word);
+                let next_word = sentence[i - 1];
 
                 current_trie
                     .get
@@ -106,15 +108,30 @@ impl Config {
                     .or_insert_with(|| Trie::new());
 
                 current_trie = current_trie.get.get_mut(&word).unwrap();
-                println!("{:?}", current_trie);
+            }
+
+            let mut other_trie = &mut forward_phrases;
+            for i in 0..(sentence.len() - 1) {
+                let word = sentence[i];
+                let next_word = sentence[i + 1];
+
+                other_trie
+                    .get
+                    .entry(word)
+                    .or_insert_with(|| Trie::new())
+                    .get
+                    .entry(next_word)
+                    .or_insert_with(|| Trie::new());
+
+                other_trie = other_trie.get.get_mut(&word).unwrap();
             }
         }
-        println!("{:?}", phrases);
         Config {
             vocabulary,
             forward,
             backward,
-            phrases,
+            backward_phrases,
+            forward_phrases,
         }
     }
 }
@@ -181,16 +198,34 @@ mod tests {
     }
 
     #[test]
-    fn it_hops_phrases_backward() {
+    fn it_hops_phrases_forward_returning_none_on_a_bad_hop() {
         let raw = "a b. c d. a c. b d.".to_string();
         let mut interner = StringInterner::default();
         let sentences = clean_sentences(raw, &mut interner);
         let config = Config::new(sentences);
         assert!(config
-            .get_phrases()
+            .get_forward_phrases()
+            .phrase_hop(interner.get("a").unwrap().to_usize())
+            .unwrap()
+            .phrase_hop(interner.get("b").unwrap().to_usize())
+            .unwrap()
+            .phrase_hop(interner.get("c").unwrap().to_usize())
+            .is_none());
+    }
+
+    #[test]
+    fn it_hops_phrases_backward_returning_none_on_a_bad_hop() {
+        let raw = "a b. c d. a c. b d.".to_string();
+        let mut interner = StringInterner::default();
+        let sentences = clean_sentences(raw, &mut interner);
+        let config = Config::new(sentences);
+        assert!(config
+            .get_backward_phrases()
             .phrase_hop(interner.get("b").unwrap().to_usize())
             .unwrap()
             .phrase_hop(interner.get("a").unwrap().to_usize())
+            .unwrap()
+            .phrase_hop(interner.get("c").unwrap().to_usize())
             .is_none());
     }
 }
