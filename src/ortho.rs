@@ -1,13 +1,14 @@
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 use std::hash::Hash;
 
-pub struct Ortho<'a> {
-    nodes: Vec<HashSet<Node<'a>>>,
+#[derive(Debug, PartialEq, Hash, Eq, PartialOrd, Ord)]
+pub struct Ortho {
+    nodes: Vec<BTreeSet<Node>>,
 }
 
-impl Ortho<'_> {
-    pub fn new<'a>(a: &'a str, b: &'a str, c: &'a str, d: &'a str) -> Ortho<'a> {
-        let mut nodes = vec![HashSet::new(), HashSet::new(), HashSet::new()];
+impl Ortho {
+    pub fn new(a: usize, b: usize, c: usize, d: usize) -> Ortho {
+        let mut nodes = vec![BTreeSet::new(), BTreeSet::new(), BTreeSet::new()];
         let a_set = MultiSet::new();
         let mut b_set = MultiSet::new();
         let mut c_set = MultiSet::new();
@@ -16,7 +17,7 @@ impl Ortho<'_> {
         b_set.insert(b);
         c_set.insert(c);
         d_set.insert(b);
-        d_set.insert(d);
+        d_set.insert(c);
 
         let node_a = Node {
             name: a,
@@ -46,24 +47,37 @@ impl Ortho<'_> {
     }
 }
 
-#[derive(PartialEq, Eq, Hash)]
-pub struct Node<'a> {
-    name: &'a str,
-    location: MultiSet<'a>,
+#[derive(PartialEq, Eq, Hash, Debug, PartialOrd, Ord)]
+pub struct Node {
+    name: usize,
+    location: MultiSet,
 }
 
-#[derive(PartialEq, Eq, Hash)]
-pub struct MultiSet<'a> {
-    set: Vec<&'a str>,
+#[derive(PartialEq, Eq, Hash, Debug, PartialOrd, Ord)]
+pub struct MultiSet {
+    set: Vec<usize>,
 }
 
-impl<'a> MultiSet<'a> {
-    pub fn new() -> MultiSet<'a> {
+// todo make this faster. Probably use a map of counts
+impl MultiSet {
+    pub fn new() -> MultiSet {
         MultiSet { set: vec![] }
     }
 
-    pub fn insert(&mut self, item: &'a str) {
+    pub fn insert(&mut self, item: usize) {
         self.set.push(item);
         self.set.sort();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn it_compares_equal_across_rotation() {
+        let ortho = Ortho::new(1, 2, 3, 4);
+        let ortho2 = Ortho::new(1, 3, 2, 4);
+
+        assert!(ortho == ortho2);
     }
 }

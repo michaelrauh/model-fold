@@ -43,7 +43,7 @@ pub struct Config {
     vocabulary: IntSet<usize>,
     forward: IntMap<usize, IntSet<usize>>,
     backward: IntMap<usize, IntSet<usize>>,
-    backward_phrases: Trie,
+    backward_phrases: Trie, // todo delete this
     forward_phrases: Trie,
 }
 
@@ -67,6 +67,14 @@ impl Config {
     pub fn get_forward_phrases(&self) -> &Trie {
         &self.forward_phrases
     }
+
+    pub fn from_sentences(raw: String) -> (Config, StringInterner) {
+        let mut interner = StringInterner::default();
+        let sentences = clean_sentences(raw, &mut interner);
+        (Config::new(sentences), interner)
+    }
+
+    // todo add merging
 
     // todo: when saving these in a DB or merging them, beware that interning is inconistent (rebuild interning or rebuild config)
     pub fn new(sentences: Vec<Vec<usize>>) -> Config {
@@ -141,10 +149,7 @@ mod tests {
     use super::*;
     #[test]
     fn it_iterates() {
-        let raw = "a b. c d. a c. b d.".to_string();
-        let mut interner = StringInterner::default();
-        let sentences = clean_sentences(raw, &mut interner);
-        let config = Config::new(sentences);
+        let (config, interner) = Config::from_sentences("a b. c d. a c. b d.".to_string());
         assert_eq!(config.vocabulary.len(), 4);
         assert_eq!(config.iter().collect::<Vec<_>>().len(), 4);
         for word in config.iter() {
@@ -154,10 +159,7 @@ mod tests {
 
     #[test]
     fn it_projects_forward() {
-        let raw = "a b. c d. a c. b d.".to_string();
-        let mut interner = StringInterner::default();
-        let sentences = clean_sentences(raw, &mut interner);
-        let config = Config::new(sentences);
+        let (config, interner) = Config::from_sentences("a b. c d. a c. b d.".to_string());
         assert!(config
             .project_forward(interner.get("a").unwrap().to_usize())
             .unwrap()
@@ -179,10 +181,7 @@ mod tests {
 
     #[test]
     fn it_projects_backward() {
-        let raw = "a b. c d. a c. b d.".to_string();
-        let mut interner = StringInterner::default();
-        let sentences = clean_sentences(raw, &mut interner);
-        let config = Config::new(sentences);
+        let (config, interner) = Config::from_sentences("a b. c d. a c. b d.".to_string());
         assert!(config
             .project_backward(interner.get("b").unwrap().to_usize())
             .unwrap()
@@ -199,10 +198,7 @@ mod tests {
 
     #[test]
     fn it_hops_phrases_forward_returning_none_on_a_bad_hop() {
-        let raw = "a b. c d. a c. b d.".to_string();
-        let mut interner = StringInterner::default();
-        let sentences = clean_sentences(raw, &mut interner);
-        let config = Config::new(sentences);
+        let (config, interner) = Config::from_sentences("a b. c d. a c. b d.".to_string());
         assert!(config
             .get_forward_phrases()
             .phrase_hop(interner.get("a").unwrap().to_usize())
@@ -215,10 +211,7 @@ mod tests {
 
     #[test]
     fn it_hops_phrases_backward_returning_none_on_a_bad_hop() {
-        let raw = "a b. c d. a c. b d.".to_string();
-        let mut interner = StringInterner::default();
-        let sentences = clean_sentences(raw, &mut interner);
-        let config = Config::new(sentences);
+        let (config, interner) = Config::from_sentences("a b. c d. a c. b d.".to_string());
         assert!(config
             .get_backward_phrases()
             .phrase_hop(interner.get("b").unwrap().to_usize())
