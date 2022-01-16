@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashSet};
+use std::collections::BTreeSet;
 use std::hash::Hash;
 
 #[derive(Debug, PartialEq, Hash, Eq, PartialOrd, Ord)]
@@ -6,6 +6,15 @@ pub struct Ortho {
     nodes: Vec<BTreeSet<Node>>,
 }
 
+pub struct LiteralOrtho {
+    nodes: Vec<BTreeSet<LiteralNode>>,
+}
+
+pub struct LiteralNode {
+
+}
+
+// todo change from set of nodes to map of location to name
 impl Ortho {
     pub fn new(a: usize, b: usize, c: usize, d: usize) -> Ortho {
         let mut nodes = vec![BTreeSet::new(), BTreeSet::new(), BTreeSet::new()];
@@ -58,7 +67,7 @@ pub struct MultiSet {
     set: Vec<usize>,
 }
 
-// todo make this faster. Probably use a map of counts
+// todo make this faster. Use a map of counts
 impl MultiSet {
     pub fn new() -> MultiSet {
         MultiSet { set: vec![] }

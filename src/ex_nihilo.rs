@@ -1,7 +1,8 @@
 use crate::{Config, Ortho};
 use std::collections::HashSet;
-use string_interner::Symbol;
 
+// todo start building top down to use this
+// top level can do two things: make a new repo with a new config, or merge two existing ones
 pub fn create(config: Config, a: usize) -> HashSet<Ortho> {
     let mut results = HashSet::default();
     // a -> b -> d <- c <- a'
@@ -34,6 +35,7 @@ pub fn create(config: Config, a: usize) -> HashSet<Ortho> {
 
 #[cfg(test)]
 mod tests {
+    use string_interner::Symbol;
     use super::*;
     #[test]
     fn it_can_be_made() {
