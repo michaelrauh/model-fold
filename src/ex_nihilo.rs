@@ -30,13 +30,13 @@ pub fn create(config: Config, a: usize) -> HashSet<Ortho> {
             }
         }
     }
-    results
+    results // todo add repo set subract here
 }
 
 #[cfg(test)]
 mod tests {
-    use string_interner::Symbol;
     use super::*;
+    use string_interner::Symbol;
     #[test]
     fn it_can_be_made() {
         let (config, interner) = Config::from_sentences("a b. c d. a c. b d.".to_string());

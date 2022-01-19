@@ -1,16 +1,16 @@
 use nohash_hasher::IntMap;
 use nohash_hasher::IntSet;
+use std::collections::HashMap;
+use std::collections::HashSet;
 use string_interner::StringInterner;
 use string_interner::Symbol;
-use std::collections::HashSet;
-use std::collections::HashMap;
-
 
 // todo wherever usize is used in a hashmap or hashset, convert that to an intset or intmap
 // wherever hashing is used directly, use a fast hasher
 // wherever a hashmap is used, use a hashmap with a fast hasher
-// don't use btreemap or btreeset 
-pub fn clean_sentences(sentences: String, interner: &mut StringInterner) -> Vec<Vec<usize>> {
+// don't use btreemap or btreeset
+
+pub fn clean_sentences(sentences: String) -> Vec<Vec<String>> {
     sentences
         .split(|x| x == '.' || x == '!' || x == '?')
         .filter(|x| !x.is_empty())
@@ -23,8 +23,6 @@ pub fn clean_sentences(sentences: String, interner: &mut StringInterner) -> Vec<
                 .to_lowercase()
                 .split_ascii_whitespace()
                 .map(|x| x.to_string())
-                .map(|x| StringInterner::get_or_intern(interner, x))
-                .map(|x| x.to_usize())
                 .collect()
         })
         .collect()
@@ -41,10 +39,40 @@ struct LiteralConfig {
     vocabulary: HashSet<String>,
     forward: HashMap<String, HashSet<String>>,
     backward: HashMap<String, HashSet<String>>,
-    // todo add phrases. This will be a hashmap of vector to set of string
+    // todo add phrases. This will be a hashmap of vector of string to set of string
 }
 
 impl LiteralConfig {
+    pub fn new(sentences: Vec<Vec<String>>) -> LiteralConfig {
+        let mut vocabulary = HashSet::default();
+        let mut forward = HashMap::default();
+        let mut backward = HashMap::default();
+
+        for sentence in sentences {
+            for i in 0..sentence.len() - 1 {
+                let word = sentence[i].clone();
+                let next_word = sentence[i + 1].clone();
+                vocabulary.insert(word.clone());
+                vocabulary.insert(next_word.clone());
+
+                forward
+                    .entry(word.clone())
+                    .or_insert_with(HashSet::default)
+                    .insert(next_word.clone());
+
+                backward
+                    .entry(next_word)
+                    .or_insert_with(HashSet::default)
+                    .insert(word);
+            }
+        }
+        LiteralConfig {
+            vocabulary,
+            forward,
+            backward,
+        }
+    }
+
     fn save() {
         // todo
     }
@@ -53,8 +81,34 @@ impl LiteralConfig {
         // todo
     }
 
-    fn intern() {
-        // todo
+    pub fn intern(&self, string_interner: &mut StringInterner) -> Config {
+        Config {
+            vocabulary: Self::intern_hashset(&self.vocabulary, string_interner),
+            forward: Self::intern_hashmap(&self.forward, string_interner),
+            backward: Self::intern_hashmap(&self.backward, string_interner),
+        }
+    }
+
+    fn intern_hashset(hs: &HashSet<String>, string_interner: &mut StringInterner) -> IntSet<usize> {
+        let mut set = IntSet::default();
+        for word in hs.iter() {
+            set.insert(string_interner.get_or_intern(word).to_usize());
+        }
+        set
+    }
+
+    fn intern_hashmap(
+        hm: &HashMap<String, HashSet<String>>,
+        string_interner: &mut StringInterner,
+    ) -> IntMap<usize, IntSet<usize>> {
+        let mut new_hm = IntMap::default();
+        for (k, v) in hm {
+            new_hm.insert(
+                string_interner.get_or_intern(k).to_usize(),
+                Self::intern_hashset(v, string_interner),
+            );
+        }
+        new_hm
     }
 
     fn load() {
@@ -63,36 +117,6 @@ impl LiteralConfig {
 }
 
 impl Config {
-    pub fn new(sentences: Vec<Vec<usize>>) -> Config {
-        let mut vocabulary = IntSet::default();
-        let mut forward = IntMap::default();
-        let mut backward = IntMap::default();
-
-        for sentence in sentences {
-            for i in 0..sentence.len() - 1 {
-                let word = sentence[i];
-                let next_word = sentence[i + 1];
-                vocabulary.insert(word);
-                vocabulary.insert(next_word);
-
-                forward
-                    .entry(word)
-                    .or_insert_with(IntSet::default)
-                    .insert(next_word);
-
-                backward
-                    .entry(next_word)
-                    .or_insert_with(IntSet::default)
-                    .insert(word);
-            }
-        }
-        Config {
-            vocabulary,
-            forward,
-            backward,
-        }
-    }
-
     pub fn project_forward(&self, word: usize) -> Option<&IntSet<usize>> {
         self.forward.get(&word)
     }
@@ -107,8 +131,8 @@ impl Config {
 
     pub fn from_sentences(raw: String) -> (Config, StringInterner) {
         let mut interner = StringInterner::default();
-        let sentences = clean_sentences(raw, &mut interner);
-        (Config::new(sentences), interner)
+        let config = LiteralConfig::new(clean_sentences(raw)).intern(&mut interner);
+        (config, interner)
     }
 }
 

@@ -1,24 +1,19 @@
 use crate::ortho::LiteralOrtho;
 use crate::ortho::Ortho;
-use nohash_hasher::IntMap;
-use nohash_hasher::IntSet;
-use string_interner::StringInterner;
-use string_interner::Symbol;
-use std::collections::HashSet;
 use std::collections::HashMap;
 
 pub struct Repo {
-    Origin: HashMap<usize, Ortho>,
-    Hops: HashMap<usize, Ortho>,
+    origin: HashMap<usize, Ortho>,
+    hops: HashMap<usize, Ortho>,
 }
 
 pub struct LiteralRepo {
-    Origin: HashMap<String, LiteralOrtho>,
-    Hops: HashMap<String, LiteralOrtho>,
+    origin: HashMap<String, LiteralOrtho>,
+    hops: HashMap<String, LiteralOrtho>,
 }
 
 impl Repo {
-    pub fn new() { 
+    pub fn new() {
         // todo makes an interned repo
     }
 
@@ -31,9 +26,9 @@ impl Repo {
     }
 }
 
-impl LiteralRepo { 
+impl LiteralRepo {
     pub fn intern() {
-        // todo 
+        // todo
     }
 
     pub fn save() {

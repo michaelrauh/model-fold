@@ -10,9 +10,7 @@ pub struct LiteralOrtho {
     nodes: Vec<BTreeSet<LiteralNode>>,
 }
 
-pub struct LiteralNode {
-
-}
+pub struct LiteralNode {}
 
 // todo change from set of nodes to map of location to name
 impl Ortho {
