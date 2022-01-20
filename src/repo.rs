@@ -13,8 +13,15 @@ pub struct LiteralRepo {
 }
 
 impl Repo {
-    pub fn new() {
-        // todo makes an interned repo
+    pub fn len(&self) -> usize {
+        0
+    }
+
+    pub fn new() -> Repo {
+        Repo {
+            origin: HashMap::default(),
+            hops: HashMap::default(),
+        }
     }
 
     pub fn unintern() {

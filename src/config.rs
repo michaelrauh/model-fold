@@ -22,7 +22,7 @@ pub fn clean_sentences(sentences: String) -> Vec<Vec<String>> {
         })
         .collect()
 }
- 
+
 pub struct Config {
     vocabulary: IntSet<usize>,
     forward: IntMap<usize, IntSet<usize>>,

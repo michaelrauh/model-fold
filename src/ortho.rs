@@ -1,20 +1,18 @@
-use std::hash::Hash;
 use std::collections::BTreeMap;
+use std::hash::Hash;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Ortho {
-    nodes: Vec<BTreeMap<MultiSet<usize>, usize>>
+    nodes: Vec<BTreeMap<MultiSet<usize>, usize>>,
 }
-
-pub struct LiteralOrtho {
-    nodes: Vec<BTreeMap<MultiSet<String>, String>>,
-}
-
-pub struct LiteralNode {}
 
 impl Ortho {
     pub fn new(a: usize, b: usize, c: usize, d: usize) -> Ortho {
-        let mut nodes = vec![BTreeMap::default(), BTreeMap::default(), BTreeMap::default()];
+        let mut nodes = vec![
+            BTreeMap::default(),
+            BTreeMap::default(),
+            BTreeMap::default(),
+        ];
         let mut b_location = MultiSet::new();
         let mut c_location = MultiSet::new();
         let mut d_location = MultiSet::new();
@@ -36,6 +34,12 @@ impl Ortho {
     }
 }
 
+pub struct LiteralOrtho {
+    nodes: Vec<BTreeMap<MultiSet<String>, String>>,
+}
+
+impl LiteralOrtho {}
+
 #[derive(PartialEq, Eq, Hash, Debug, PartialOrd, Ord)]
 pub struct MultiSet<T> {
     set: BTreeMap<T, usize>,
@@ -43,7 +47,9 @@ pub struct MultiSet<T> {
 
 impl<T: Ord> MultiSet<T> {
     pub fn new() -> MultiSet<T> {
-        MultiSet { set: BTreeMap::default() }
+        MultiSet {
+            set: BTreeMap::default(),
+        }
     }
 
     pub fn insert(&mut self, item: T) {
