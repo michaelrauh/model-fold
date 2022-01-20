@@ -1,79 +1,54 @@
-use std::collections::BTreeSet;
 use std::hash::Hash;
+use std::collections::BTreeMap;
 
-#[derive(Debug, PartialEq, Hash, Eq, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Ortho {
-    nodes: Vec<BTreeSet<Node>>,
+    nodes: Vec<BTreeMap<MultiSet<usize>, usize>>
 }
 
 pub struct LiteralOrtho {
-    nodes: Vec<BTreeSet<LiteralNode>>,
+    nodes: Vec<BTreeMap<MultiSet<String>, String>>,
 }
 
 pub struct LiteralNode {}
 
-// todo change from set of nodes to map of location to name
 impl Ortho {
     pub fn new(a: usize, b: usize, c: usize, d: usize) -> Ortho {
-        let mut nodes = vec![BTreeSet::new(), BTreeSet::new(), BTreeSet::new()];
-        let a_set = MultiSet::new();
-        let mut b_set = MultiSet::new();
-        let mut c_set = MultiSet::new();
-        let mut d_set = MultiSet::new();
+        let mut nodes = vec![BTreeMap::default(), BTreeMap::default(), BTreeMap::default()];
+        let mut b_location = MultiSet::new();
+        let mut c_location = MultiSet::new();
+        let mut d_location = MultiSet::new();
 
-        b_set.insert(b);
-        c_set.insert(c);
-        d_set.insert(b);
-        d_set.insert(c);
+        b_location.insert(b);
+        c_location.insert(c);
+        d_location.insert(b);
+        d_location.insert(c);
 
-        let node_a = Node {
-            name: a,
-            location: a_set,
-        };
-
-        let node_b = Node {
-            name: b,
-            location: b_set,
-        };
-
-        let node_c = Node {
-            name: c,
-            location: c_set,
-        };
-
-        let node_d = Node {
-            name: d,
-            location: d_set,
-        };
-
-        nodes[0].insert(node_a);
-        nodes[1].insert(node_b);
-        nodes[1].insert(node_c);
-        nodes[2].insert(node_d);
+        nodes[0].insert(MultiSet::new(), a);
+        nodes[1].insert(b_location, b);
+        nodes[1].insert(c_location, c);
+        nodes[2].insert(d_location, d);
         Ortho { nodes }
     }
+
+    pub fn unintern() {
+        // todo
+    }
 }
 
 #[derive(PartialEq, Eq, Hash, Debug, PartialOrd, Ord)]
-pub struct Node {
-    name: usize,
-    location: MultiSet,
+pub struct MultiSet<T> {
+    set: BTreeMap<T, usize>,
 }
 
-#[derive(PartialEq, Eq, Hash, Debug, PartialOrd, Ord)]
-pub struct MultiSet {
-    set: Vec<usize>,
-}
-
-// todo make this faster. Use a map of counts
-impl MultiSet {
-    pub fn new() -> MultiSet {
-        MultiSet { set: vec![] }
+impl<T: Ord> MultiSet<T> {
+    pub fn new() -> MultiSet<T> {
+        MultiSet { set: BTreeMap::default() }
     }
 
-    pub fn insert(&mut self, item: usize) {
-        self.set.push(item);
-        self.set.sort();
+    pub fn insert(&mut self, item: T) {
+        let count = self.set.entry(item).or_insert(0);
+        *count += 1;
     }
 }
 

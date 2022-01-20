@@ -1,10 +1,10 @@
 use crate::{Config, Ortho};
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 // todo start building top down to use this
 // top level can do two things: make a new repo with a new config, or merge two existing ones
-pub fn create(config: Config, a: usize) -> HashSet<Ortho> {
-    let mut results = HashSet::default();
+pub fn create(config: Config, a: usize) -> BTreeSet<Ortho> {
+    let mut results = BTreeSet::default();
     // a -> b -> d <- c <- a'
     // a == a'
     // b != c

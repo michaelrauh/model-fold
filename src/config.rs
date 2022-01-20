@@ -5,11 +5,6 @@ use std::collections::HashSet;
 use string_interner::StringInterner;
 use string_interner::Symbol;
 
-// todo wherever usize is used in a hashmap or hashset, convert that to an intset or intmap
-// wherever hashing is used directly, use a fast hasher
-// wherever a hashmap is used, use a hashmap with a fast hasher
-// don't use btreemap or btreeset
-
 pub fn clean_sentences(sentences: String) -> Vec<Vec<String>> {
     sentences
         .split(|x| x == '.' || x == '!' || x == '?')
@@ -27,7 +22,7 @@ pub fn clean_sentences(sentences: String) -> Vec<Vec<String>> {
         })
         .collect()
 }
-
+ 
 pub struct Config {
     vocabulary: IntSet<usize>,
     forward: IntMap<usize, IntSet<usize>>,
