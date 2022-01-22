@@ -1,9 +1,12 @@
 use std::collections::BTreeMap;
 use std::hash::Hash;
 
+use string_interner::StringInterner;
+use string_interner::Symbol;
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct Ortho {
-    nodes: Vec<BTreeMap<MultiSet<usize>, usize>>,
+    nodes: Vec<BTreeMap<MultiSet, usize>>,
 }
 
 impl Ortho {
@@ -29,48 +32,99 @@ impl Ortho {
         Ortho { nodes }
     }
 
-    pub fn unintern() {
-        // todo
+    pub fn unintern(&self, interner: &StringInterner) -> LiteralOrtho {
+        LiteralOrtho { nodes:
+            self.nodes.iter().map(|m| {
+            m.iter().map(|(k, v)| {
+                (k.unintern(interner), interner.resolve(Symbol::try_from_usize(*v).unwrap())
+                    .unwrap().to_string())
+            }).collect()
+        }).collect()
+    }
     }
 
-    pub fn size(&self) -> MultiSet<usize> {
+    pub fn size(&self) -> MultiSet {
         let mut mapping = self.nodes.last().unwrap().iter();
-        let (location, _name) = mapping.next().unwrap(); // todo switch to nightly and use first instead of iter next
+        let (location, _name) = mapping.next().unwrap();
         location.size()
     }
 
     pub fn origin(&self) -> usize {
         let mut mapping = self.nodes.first().unwrap().iter();
-        let (_location, name) = mapping.next().unwrap(); // todo switch to nightly and use first instead of iter next
+        let (_location, name) = mapping.next().unwrap();
         *name
     }
 
-    pub fn hop(&self) -> std::collections::btree_map::Values<MultiSet<usize>, usize> {
+    pub fn hop(&self) -> std::collections::btree_map::Values<MultiSet, usize> {
         let mut nodes = self.nodes.iter();
         nodes.next();
         nodes.next().unwrap().values()
     }
 }
-
+#[derive(PartialEq, Eq, Hash, Debug, PartialOrd, Ord, Clone)]
 pub struct LiteralOrtho {
-    nodes: Vec<BTreeMap<MultiSet<String>, String>>,
+    nodes: Vec<BTreeMap<LiteralMultiSet, String>>,
 }
 
-impl LiteralOrtho {}
+impl LiteralOrtho {
+    pub fn intern(&self, interner: &mut StringInterner) -> Ortho {
+        Ortho { nodes:
+            self.nodes.iter().map(|m| {
+            m.iter().map(|(k, v)| {
+                (k.intern(interner), interner.get_or_intern(v).to_usize())
+            }).collect()
+        }).collect()
+    }
+    }
+}
 
 #[derive(PartialEq, Eq, Hash, Debug, PartialOrd, Ord, Clone)]
-pub struct MultiSet<T> {
-    set: BTreeMap<T, usize>,
+pub struct LiteralMultiSet {
+    set: BTreeMap<String, usize>,
 }
 
-impl<T: Ord> MultiSet<T> {
-    pub fn new() -> MultiSet<T> {
+impl LiteralMultiSet {
+    pub fn intern(&self, interner: &mut StringInterner) -> MultiSet {
+        MultiSet {
+            set: self
+                .set
+                .iter()
+                .map(|(k, v)| (interner.get_or_intern(k.clone()).to_usize(), *v))
+                .collect(),
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Hash, Debug, PartialOrd, Ord, Clone)]
+pub struct MultiSet {
+    set: BTreeMap<usize, usize>,
+}
+
+impl MultiSet {
+    pub fn unintern(&self, interner: &StringInterner) -> LiteralMultiSet {
+        let res = self
+            .set
+            .iter()
+            .map(|(k, v)| {
+                (
+                    interner
+                        .resolve(Symbol::try_from_usize(*k).unwrap())
+                        .unwrap()
+                        .to_string(),
+                    *v,
+                )
+            })
+            .collect();
+        LiteralMultiSet { set: res }
+    }
+
+    pub fn new() -> MultiSet {
         MultiSet {
             set: BTreeMap::default(),
         }
     }
 
-    pub fn size(&self) -> MultiSet<usize> {
+    pub fn size(&self) -> MultiSet {
         let mut set = MultiSet::new();
         for (_key, value) in self.set.iter() {
             set.insert(*value);
@@ -78,7 +132,7 @@ impl<T: Ord> MultiSet<T> {
         set
     }
 
-    pub fn insert(&mut self, item: T) {
+    pub fn insert(&mut self, item: usize) {
         let count = self.set.entry(item).or_insert(0);
         *count += 1;
     }
@@ -86,7 +140,6 @@ impl<T: Ord> MultiSet<T> {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeSet;
 
     use super::*;
     #[test]
@@ -111,10 +164,33 @@ mod tests {
     }
 
     #[test]
-    fn it_has_size() {
+    fn it_has_multisets_with_size() {
         let mut expected = MultiSet::new();
         expected.insert(1);
         expected.insert(1);
         assert_eq!(Ortho::new(1, 2, 3, 4).size(), expected);
+    }
+
+    #[test]
+    fn it_has_multisets_that_can_be_interned_or_uninterned() {
+        let mut expected = MultiSet::new();
+        let mut interner = StringInterner::default();
+        expected.insert(interner.get_or_intern("a".to_string()).to_usize());
+        expected.insert(interner.get_or_intern("a".to_string()).to_usize());
+        
+        assert_eq!(expected, expected.unintern(&mut interner).intern(&mut interner))
+    }
+
+    #[test]
+    fn it_can_be_interned_or_uninterned() {
+        let mut interner = StringInterner::default();
+        let ortho = Ortho::new(
+            interner.get_or_intern("a").to_usize(),
+            interner.get_or_intern("b").to_usize(),
+            interner.get_or_intern("c").to_usize(),
+            interner.get_or_intern("d").to_usize(),
+        );
+        
+        assert_eq!(ortho, ortho.unintern(&mut interner).intern(&mut interner))
     }
 }

@@ -27,14 +27,12 @@ pub struct Config {
     vocabulary: IntSet<usize>,
     forward: IntMap<usize, IntSet<usize>>,
     backward: IntMap<usize, IntSet<usize>>,
-    // todo add phrases. This will be a map with the hashed together strings in the phrase vector as the keys, and the values as the interned strings they point to
 }
 
 struct LiteralConfig {
     vocabulary: HashSet<String>,
     forward: HashMap<String, HashSet<String>>,
     backward: HashMap<String, HashSet<String>>,
-    // todo add phrases. This will be a hashmap of vector of string to set of string
 }
 
 impl LiteralConfig {
@@ -68,13 +66,9 @@ impl LiteralConfig {
         }
     }
 
-    fn save() {
-        // todo
-    }
+    fn save() {}
 
-    fn merge() {
-        // todo
-    }
+    fn merge() {}
 
     pub fn intern(&self, string_interner: &mut StringInterner) -> Config {
         Config {
@@ -106,9 +100,7 @@ impl LiteralConfig {
         new_hm
     }
 
-    fn load() {
-        // todo
-    }
+    fn load() {}
 }
 
 impl Config {

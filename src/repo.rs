@@ -1,17 +1,16 @@
+use crate::ortho::LiteralMultiSet;
 use crate::ortho::LiteralOrtho;
 use crate::ortho::MultiSet;
 use crate::ortho::Ortho;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
+use string_interner::StringInterner;
+use string_interner::Symbol;
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct Repo {
-    origin: HashMap<(MultiSet<usize>, usize), BTreeSet<Ortho>>,
-    hops: HashMap<(MultiSet<usize>, usize), BTreeSet<Ortho>>,
-}
-
-pub struct LiteralRepo {
-    origin: HashMap<(MultiSet<String>, String), LiteralOrtho>,
-    hops: HashMap<(MultiSet<String>, String), LiteralOrtho>,
+    origin: HashMap<(MultiSet, usize), BTreeSet<Ortho>>,
+    hops: HashMap<(MultiSet, usize), BTreeSet<Ortho>>,
 }
 
 impl Repo {
@@ -21,17 +20,13 @@ impl Repo {
 
     pub fn find_by_size_and_origin(
         &self,
-        size: MultiSet<usize>,
+        size: MultiSet,
         origin: usize,
     ) -> Option<&BTreeSet<Ortho>> {
         self.origin.get(&(size, origin))
     }
 
-    pub fn find_by_size_and_hop(
-        &self,
-        size: MultiSet<usize>,
-        origin: usize,
-    ) -> Option<&BTreeSet<Ortho>> {
+    pub fn find_by_size_and_hop(&self, size: MultiSet, origin: usize) -> Option<&BTreeSet<Ortho>> {
         self.hops.get(&(size, origin))
     }
 
@@ -42,8 +37,31 @@ impl Repo {
         }
     }
 
-    pub fn unintern() {
-        // todo converts to uninterned repo
+    pub fn unintern(&self, interner: &StringInterner) -> LiteralRepo {
+        LiteralRepo {
+            origin: Self::unintern_hashmap(&self.origin, interner),
+            hops: Self::unintern_hashmap(&self.hops, interner),
+        }
+    }
+
+    fn unintern_hashmap(
+        hm: &HashMap<(MultiSet, usize), BTreeSet<Ortho>>,
+        interner: &StringInterner,
+    ) -> HashMap<(LiteralMultiSet, String), BTreeSet<LiteralOrtho>> {
+        hm.iter()
+            .map(|(k, v)| {
+                (
+                    (
+                        k.0.unintern(interner),
+                        interner
+                            .resolve(Symbol::try_from_usize(k.1).unwrap())
+                            .unwrap()
+                            .to_string(),
+                    ),
+                    v.iter().map(|v| v.unintern(interner)).collect(),
+                )
+            })
+            .collect()
     }
 
     pub fn add(&mut self, ortho: Ortho) {
@@ -61,18 +79,42 @@ impl Repo {
     }
 }
 
+pub struct LiteralRepo {
+    origin: HashMap<(LiteralMultiSet, String), BTreeSet<LiteralOrtho>>,
+    hops: HashMap<(LiteralMultiSet, String), BTreeSet<LiteralOrtho>>,
+}
+
 impl LiteralRepo {
-    pub fn intern() {
-        // todo
+    pub fn intern(&self, interner: &mut StringInterner) -> Repo {
+        Repo {
+            origin: Self::intern_underlying(&self.origin, interner),
+            hops: Self::intern_underlying(&self.hops, interner),
+        }
     }
 
-    pub fn save() {
-        // todo
+    fn intern_underlying(
+        underlying: &HashMap<(LiteralMultiSet, String), BTreeSet<LiteralOrtho>>,
+        interner: &mut StringInterner,
+    ) -> HashMap<(MultiSet, usize), BTreeSet<Ortho>> {
+        underlying
+            .iter()
+            .map(|(k, v)| {
+                (
+                    (
+                        k.0.intern(interner),
+                        interner.get(k.1.clone()).unwrap().to_usize(),
+                    ),
+                    v.iter().map(|v| v.intern(interner)).collect(),
+                )
+            })
+            .collect()
     }
 
-    pub fn load() {
-        // todo
-    }
+    pub fn save(&self) {}
+
+    pub fn load(&self) {}
+
+    pub fn merge(&self) {}
 }
 
 #[cfg(test)]
@@ -117,5 +159,24 @@ mod tests {
                 .unwrap();
             assert_eq!(*res, ortho);
         }
+    }
+
+    #[test]
+    fn it_can_be_uninterned_and_reinterned() {
+        let mut interner = StringInterner::default();
+        let mut repo = Repo::new();
+        let ortho = Ortho::new(
+            interner.get_or_intern("a").to_usize(),
+            interner.get_or_intern("b").to_usize(),
+            interner.get_or_intern("c").to_usize(),
+            interner.get_or_intern("d").to_usize(),
+        );
+
+        repo.add(ortho.clone());
+
+        let uninterned = repo.unintern(&interner);
+        let back = uninterned.intern(&mut interner);
+
+        assert_eq!(back, repo);
     }
 }

@@ -1,8 +1,6 @@
 use crate::{Config, Ortho};
 use std::collections::BTreeSet;
 
-// todo start building top down to use this
-// top level can do two things: make a new repo with a new config, or merge two existing ones
 pub fn create(config: &Config, a: usize) -> BTreeSet<Ortho> {
     let mut results = BTreeSet::default();
     // a -> b -> d <- c <- a'
@@ -30,7 +28,7 @@ pub fn create(config: &Config, a: usize) -> BTreeSet<Ortho> {
             }
         }
     }
-    results // todo add repo set subract here
+    results // todo now add repo set subract here
 }
 
 #[cfg(test)]
