@@ -29,13 +29,17 @@ pub struct Config {
     backward: IntMap<usize, IntSet<usize>>,
 }
 
-struct LiteralConfig {
+pub struct LiteralConfig {
     vocabulary: HashSet<String>,
     forward: HashMap<String, HashSet<String>>,
     backward: HashMap<String, HashSet<String>>,
 }
 
 impl LiteralConfig {
+    pub fn from_raw(raw: String) -> LiteralConfig {
+        Self::new(clean_sentences(raw))
+    }
+
     pub fn new(sentences: Vec<Vec<String>>) -> LiteralConfig {
         let mut vocabulary = HashSet::default();
         let mut forward = HashMap::default();

@@ -5,17 +5,22 @@ use crate::Config;
 use crate::Ortho;
 use string_interner::StringInterner;
 use string_interner::Symbol;
+use crate::repo::LiteralRepo;
+use crate::config::LiteralConfig;
 
-pub fn search(input: String) -> (Repo, StringInterner, Config) {
-    let (config, interner) = Config::from_sentences(input);
+pub fn search(input: String) -> (LiteralRepo, StringInterner, LiteralConfig) {
+    let mut interner = StringInterner::default();
+    let literal_config = LiteralConfig::from_raw(input);
+    let config = literal_config.intern(&mut interner);
+
     let mut repo = Repo::new();
     for a in config.iter() {
         for find in create(&config, *a) {
             repo.add(find);
         }
     }
-
-    (repo, interner, config)
+    
+    (repo.unintern(&interner), interner, literal_config)
 }
 
 #[cfg(test)]
@@ -23,14 +28,15 @@ mod tests {
     use super::*;
     #[test]
     fn it_finds_atoms() {
-        // todo change to a bootstrap method. If there are no saved things, start from nothing. Save results. Give back literals and encapsulate interned things
-        let (repo, interner, _config) = search("a b. c d. a c. b d.".to_string());
+        // todo change to a bootstrap method. If there are no saved things, start from nothing. Save results. There can be one method at the end of the day. consume.
+        let (literal_repo, mut interner, _config) = search("a b. c d. a c. b d.".to_string());
         let to_find = Ortho::new(
             interner.get("a").unwrap().to_usize(),
             interner.get("b").unwrap().to_usize(),
             interner.get("c").unwrap().to_usize(),
             interner.get("d").unwrap().to_usize(),
         );
+        let repo = literal_repo.intern(&mut interner);
         let actual = repo
             .find_by_size_and_origin(to_find.size(), to_find.origin())
             .unwrap()
