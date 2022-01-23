@@ -72,7 +72,19 @@ impl LiteralConfig {
 
     fn save() {}
 
-    fn merge() {}
+    fn merge(&mut self, other: LiteralConfig) {
+        for x in other.vocabulary {
+            self.vocabulary.insert(x);
+        }
+        
+        for (k, v) in other.forward {
+            self.forward.entry(k).or_insert_with(HashSet::default).extend(v);
+        }
+
+        for (k, v) in other.backward {
+            self.backward.entry(k).or_insert_with(HashSet::default).extend(v);
+        }
+    }
 
     pub fn intern(&self, string_interner: &mut StringInterner) -> Config {
         Config {
@@ -129,6 +141,8 @@ impl Config {
 
 #[cfg(test)]
 mod tests {
+    use std::hash::Hash;
+
     use super::*;
 
     fn string_to_usize(interner: &StringInterner, string: &str) -> usize {
@@ -182,5 +196,27 @@ mod tests {
                 .len(),
             1
         );
+    }
+
+    #[test]
+    fn it_merges() {
+        let mut literal_config = LiteralConfig::from_raw("a b. c d. a c. b d.".to_string());
+        let literal_config2 = LiteralConfig::from_raw("e f. g h. e g. f h.".to_string());
+        let mut interner = StringInterner::default();
+        let config = literal_config.intern(&mut interner);
+        let config2 = literal_config2.intern(&mut interner);
+
+        literal_config.merge(literal_config2);
+        let res = literal_config.intern(&mut interner);
+
+        assert_eq!(res.vocabulary.len(), 8);
+        assert_eq!(config.vocabulary.len(), 4);
+        assert_eq!(config2.vocabulary.len(), 4);
+        assert_eq!(res.forward.len(), 6);
+        assert_eq!(config.forward.len(), 3);
+        assert_eq!(config2.forward.len(), 3);
+        assert_eq!(res.backward.len(), 6);
+        assert_eq!(config.backward.len(), 3);
+        assert_eq!(config2.backward.len(), 3);
     }
 }
