@@ -4,8 +4,10 @@ use crate::ortho::MultiSet;
 use crate::ortho::Ortho;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
+use std::collections::btree_map::Iter;
 use string_interner::StringInterner;
 use string_interner::Symbol;
+use std::iter::Filter;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Repo {
@@ -14,6 +16,12 @@ pub struct Repo {
 }
 
 impl Repo {
+    pub fn set_subract(&self, from: BTreeSet<Ortho>) -> BTreeSet<Ortho> {
+        from.iter().filter(|&o| { 
+            self.find_by_size_and_origin(o.size(), o.origin()).is_none()
+        }).cloned().collect()
+    }
+
     pub fn len(&self) -> usize {
         self.origin.len()
     }
@@ -178,5 +186,34 @@ mod tests {
         let back = uninterned.intern(&mut interner);
 
         assert_eq!(back, repo);
+    }
+
+    #[test]
+    fn it_can_be_used_to_subtract() {
+        let mut interner = StringInterner::default();
+        let mut repo = Repo::new();
+        let ortho = Ortho::new(
+            interner.get_or_intern("a").to_usize(),
+            interner.get_or_intern("b").to_usize(),
+            interner.get_or_intern("c").to_usize(),
+            interner.get_or_intern("d").to_usize(),
+        );
+
+        let ortho2 = Ortho::new(
+            interner.get_or_intern("e").to_usize(),
+            interner.get_or_intern("f").to_usize(),
+            interner.get_or_intern("g").to_usize(),
+            interner.get_or_intern("h").to_usize(),
+        );
+
+        repo.add(ortho.clone());
+
+        let mut target = BTreeSet::default();
+        target.insert(ortho.clone());
+        target.insert(ortho2.clone());
+
+        let res = repo.set_subract(target);
+        assert_eq!(res.len(), 1);
+        assert!(res.contains(&ortho2));
     }
 }

@@ -15,7 +15,7 @@ pub fn search(input: String) -> (LiteralRepo, StringInterner, LiteralConfig) {
 
     let mut repo = Repo::new();
     for a in config.iter() {
-        for find in create(&config, *a) {
+        for find in create(&config, &repo, *a) {
             repo.add(find);
         }
     }
@@ -47,6 +47,5 @@ mod tests {
         assert_eq!(repo.len(), 1);
         assert_eq!(*actual, to_find);
     }
-
     // todo it loads a repo and config, merges them, saves the plain config, searches, uninterns the repo, and saves it.
 }

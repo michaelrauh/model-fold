@@ -1,7 +1,8 @@
 use crate::{Config, Ortho};
 use std::collections::BTreeSet;
+use crate::repo::Repo;
 
-pub fn create(config: &Config, a: usize) -> BTreeSet<Ortho> {
+pub fn create(config: &Config, repo: &Repo, a: usize) -> BTreeSet<Ortho> {
     let mut results = BTreeSet::default();
     // a -> b -> d <- c <- a'
     // a == a'
@@ -28,7 +29,7 @@ pub fn create(config: &Config, a: usize) -> BTreeSet<Ortho> {
             }
         }
     }
-    results // todo now add repo set subract here
+    repo.set_subract(results)
 }
 
 #[cfg(test)]
@@ -38,7 +39,23 @@ mod tests {
     #[test]
     fn it_can_be_made() {
         let (config, interner) = Config::from_sentences("a b. c d. a c. b d.".to_string());
-        let res = create(&config, interner.get("a").unwrap().to_usize());
+        let repo = Repo::new();
+        let res = create(&config, &repo, interner.get("a").unwrap().to_usize());
         assert!(res.len() == 1);
+    }
+
+    #[test]
+    fn it_will_not_return_the_same_thing_twice() {
+        let (config, interner) = Config::from_sentences("a b. c d. a c. b d.".to_string());
+        let mut repo = Repo::new();
+        let res = create(&config, &repo, interner.get("a").unwrap().to_usize());
+        assert!(res.len() == 1);
+
+        res.iter().for_each(|x| {
+            repo.add(x.clone());
+        });
+
+        let res = create(&config, &repo, interner.get("a").unwrap().to_usize());
+        assert!(res.len() == 0);
     }
 }

@@ -155,6 +155,7 @@ mod tests {
         assert_eq!(Ortho::new(1, 2, 3, 4).origin(), 1);
     }
 
+    #[test]
     fn it_exposes_hop() {
         let ortho = Ortho::new(1, 2, 3, 4);
         let actual: Vec<&usize> = ortho.hop().collect();
