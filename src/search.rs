@@ -1,3 +1,5 @@
+use std::fs::File;
+
 use crate::config::LiteralConfig;
 use crate::ex_nihilo::create;
 use crate::ortho::LiteralOrtho;
@@ -8,44 +10,91 @@ use crate::Ortho;
 use string_interner::StringInterner;
 use string_interner::Symbol;
 
-pub fn search(input: String) -> (LiteralRepo, StringInterner, LiteralConfig) {
-    let mut interner = StringInterner::default();
-    let literal_config = LiteralConfig::from_raw(input);
-    let config = literal_config.intern(&mut interner);
+pub fn search(input: String, config_filename: &str, repo_filename: &str) {
+    if std::path::Path::new(config_filename).exists() {
+        let mut interner = StringInterner::default();
+        let mut literal_config = LiteralConfig::from_raw(input);
+        let config = literal_config.intern(&mut interner);
+        let mut repo = Repo::new();
 
-    let mut repo = Repo::new();
+        make_atoms(&config, &mut repo);
+
+        let mut literal_repo = repo.unintern(&interner);
+
+        let (old_config, old_repo) = load_from_disk(config_filename, repo_filename);
+
+        literal_repo.merge(old_repo);
+        literal_config.merge(old_config);
+
+        let mut new_interner = StringInterner::default();
+
+        let current_config = literal_config.intern(&mut new_interner);
+        let mut current_repo = literal_repo.intern(&mut new_interner);
+
+        make_atoms(&current_config, &mut current_repo);
+
+        save_to_disk(&mut literal_config, &mut new_interner, &mut current_repo, config_filename, repo_filename);
+    } else {
+        let mut interner = StringInterner::default();
+        let mut literal_config = LiteralConfig::from_raw(input);
+        let config = literal_config.intern(&mut interner);
+
+        let mut repo = Repo::new();
+        make_atoms(&config, &mut repo);
+        save_to_disk(&mut literal_config, &mut interner, &mut repo, config_filename, repo_filename);
+    }
+}
+
+fn load_from_disk(config_filename: &str, repo_filename: &str) -> (LiteralConfig, LiteralRepo) {
+    let old_config = LiteralConfig::load(File::open(config_filename).unwrap());
+    let old_repo = LiteralRepo::load(File::open(repo_filename).unwrap());
+    (old_config, old_repo)
+}
+
+fn save_to_disk(literal_config: &mut LiteralConfig, new_interner: &mut StringInterner, current_repo: &mut Repo, config_filename: &str, repo_filename: &str) {
+    current_repo.unintern(&new_interner).save(File::create(repo_filename).unwrap());
+    literal_config.save(File::create(config_filename).unwrap());
+}
+
+fn make_atoms(config: &Config, repo: &mut Repo) {
     for a in config.iter() {
         for find in create(&config, &repo, *a) {
             repo.add(find);
         }
     }
-
-    (repo.unintern(&interner), interner, literal_config)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    #[test]
-    fn it_finds_atoms() {
-        // todo change to a bootstrap method. If there are no saved things, start from nothing. Save results. There can be one method at the end of the day. consume.
-        let (literal_repo, mut interner, _config) = search("a b. c d. a c. b d.".to_string());
-        let to_find = Ortho::new(
-            interner.get("a").unwrap().to_usize(),
-            interner.get("b").unwrap().to_usize(),
-            interner.get("c").unwrap().to_usize(),
-            interner.get("d").unwrap().to_usize(),
-        );
-        let repo = literal_repo.intern(&mut interner);
-        let actual = repo
-            .find_by_size_and_origin(to_find.size(), to_find.origin())
-            .unwrap()
-            .iter()
-            .next()
-            .unwrap();
+    use crate::repo;
 
-        assert_eq!(repo.len(), 1);
-        assert_eq!(*actual, to_find);
+    use super::*;
+
+    #[test]
+    fn it_advances() {
+        // todo question references. Some things can just be consumed. This would make sense to do once search is done
+        // todo question mut interner in places - arguably only mutate for config
+        // todo question collect calls
+        // todo question collecting to a set instead of using iter
+        
+        let config_filename = "test_config.yaml";
+        let repo_filename = "test_repo.yaml";
+        search("a b. c d. a c. b d. i k. j l.".to_string(), config_filename, repo_filename);
+        let mut first_interner = StringInterner::default();
+        let first_config = LiteralConfig::load(File::open(config_filename).unwrap()).intern(&mut first_interner);
+        let first_repo = LiteralRepo::load(File::open(repo_filename).unwrap()).intern(&mut first_interner);
+
+        assert_eq!(first_repo.len(), 1);
+
+        search("e f. g h. e g. f h. i j. k l.".to_string(), config_filename, repo_filename);
+
+        let mut second_interner = StringInterner::default();
+        let second_config = LiteralConfig::load(File::open(config_filename).unwrap()).intern(&mut second_interner);
+        let second_repo = LiteralRepo::load(File::open(repo_filename).unwrap()).intern(&mut second_interner);
+
+        assert_eq!(second_repo.len(), 3);
+
+        std::fs::remove_file(config_filename).unwrap();
+        std::fs::remove_file(repo_filename).unwrap();
     }
-    // todo it loads a repo and config, merges them, saves the plain config, searches, uninterns the repo, and saves it.
-}
+} 

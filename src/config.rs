@@ -83,7 +83,7 @@ impl LiteralConfig {
         .unwrap();
     }
 
-    fn merge(&mut self, other: LiteralConfig) {
+    pub fn merge(&mut self, other: LiteralConfig) {
         for x in other.vocabulary {
             self.vocabulary.insert(x);
         }

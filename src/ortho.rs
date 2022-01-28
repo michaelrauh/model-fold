@@ -111,7 +111,7 @@ impl LiteralMultiSet {
     }
 }
 
-#[derive(PartialEq, Eq, Hash, Debug, PartialOrd, Ord, Clone)]
+#[derive(PartialEq, Eq, Hash, Debug, PartialOrd, Ord, Clone, Serialize, Deserialize)]
 pub struct MultiSet {
     set: BTreeMap<usize, usize>,
 }
@@ -163,7 +163,9 @@ mod tests {
         let ortho = Ortho::new(1, 2, 3, 4);
         let ortho2 = Ortho::new(1, 3, 2, 4);
 
-        assert!(ortho == ortho2);
+        assert_eq!(ortho, ortho2);
+        assert_eq!(ortho.origin(), ortho2.origin());
+        assert_eq!(ortho.size(), ortho2.size());
     }
 
     #[test]
@@ -181,11 +183,11 @@ mod tests {
     }
 
     #[test]
-    fn it_has_multisets_with_size() {
+    fn it_has_size() {
         let mut expected = MultiSet::new();
         expected.insert(1);
         expected.insert(1);
-        assert_eq!(Ortho::new(1, 2, 3, 4).size(), expected);
+        assert_eq!(Ortho::new(10, 20, 30, 40).size(), expected);
     }
 
     #[test]

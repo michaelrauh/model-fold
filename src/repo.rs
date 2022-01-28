@@ -57,12 +57,12 @@ impl Repo {
     fn unintern_hashmap(
         hm: &HashMap<(MultiSet, usize), BTreeSet<Ortho>>,
         interner: &StringInterner,
-    ) -> HashMap<(LiteralMultiSet, String), BTreeSet<LiteralOrtho>> {
+    ) -> HashMap<(MultiSet, String), BTreeSet<LiteralOrtho>> {
         hm.iter()
             .map(|(k, v)| {
                 (
                     (
-                        k.0.unintern(interner),
+                        k.0.clone(),
                         interner
                             .resolve(Symbol::try_from_usize(k.1).unwrap())
                             .unwrap()
@@ -91,8 +91,8 @@ impl Repo {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct LiteralRepo {
-    origin: HashMap<(LiteralMultiSet, String), BTreeSet<LiteralOrtho>>,
-    hops: HashMap<(LiteralMultiSet, String), BTreeSet<LiteralOrtho>>,
+    origin: HashMap<(MultiSet, String), BTreeSet<LiteralOrtho>>,
+    hops: HashMap<(MultiSet, String), BTreeSet<LiteralOrtho>>,
 }
 
 impl LiteralRepo {
@@ -104,7 +104,7 @@ impl LiteralRepo {
     }
 
     fn intern_underlying(
-        underlying: &HashMap<(LiteralMultiSet, String), BTreeSet<LiteralOrtho>>,
+        underlying: &HashMap<(MultiSet, String), BTreeSet<LiteralOrtho>>,
         interner: &mut StringInterner,
     ) -> HashMap<(MultiSet, usize), BTreeSet<Ortho>> {
         underlying
@@ -112,7 +112,7 @@ impl LiteralRepo {
             .map(|(k, v)| {
                 (
                     (
-                        k.0.intern(interner),
+                        k.0.clone(),
                         interner.get(k.1.clone()).unwrap().to_usize(),
                     ),
                     v.iter().map(|v| v.intern(interner)).collect(),
