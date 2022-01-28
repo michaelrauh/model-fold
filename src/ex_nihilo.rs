@@ -1,6 +1,6 @@
+use crate::repo::Repo;
 use crate::{Config, Ortho};
 use std::collections::BTreeSet;
-use crate::repo::Repo;
 
 pub fn create(config: &Config, repo: &Repo, a: usize) -> BTreeSet<Ortho> {
     let mut results = BTreeSet::default();

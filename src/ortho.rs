@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::hash::Hash;
 
+use serde::{Deserialize, Serialize};
 use string_interner::StringInterner;
 use string_interner::Symbol;
 
@@ -33,14 +34,25 @@ impl Ortho {
     }
 
     pub fn unintern(&self, interner: &StringInterner) -> LiteralOrtho {
-        LiteralOrtho { nodes:
-            self.nodes.iter().map(|m| {
-            m.iter().map(|(k, v)| {
-                (k.unintern(interner), interner.resolve(Symbol::try_from_usize(*v).unwrap())
-                    .unwrap().to_string())
-            }).collect()
-        }).collect()
-    }
+        LiteralOrtho {
+            nodes: self
+                .nodes
+                .iter()
+                .map(|m| {
+                    m.iter()
+                        .map(|(k, v)| {
+                            (
+                                k.unintern(interner),
+                                interner
+                                    .resolve(Symbol::try_from_usize(*v).unwrap())
+                                    .unwrap()
+                                    .to_string(),
+                            )
+                        })
+                        .collect()
+                })
+                .collect(),
+        }
     }
 
     pub fn size(&self) -> MultiSet {
@@ -61,24 +73,28 @@ impl Ortho {
         nodes.next().unwrap().values()
     }
 }
-#[derive(PartialEq, Eq, Hash, Debug, PartialOrd, Ord, Clone)]
+#[derive(PartialEq, Eq, Hash, Debug, PartialOrd, Ord, Clone, Serialize, Deserialize)]
 pub struct LiteralOrtho {
     nodes: Vec<BTreeMap<LiteralMultiSet, String>>,
 }
 
 impl LiteralOrtho {
     pub fn intern(&self, interner: &mut StringInterner) -> Ortho {
-        Ortho { nodes:
-            self.nodes.iter().map(|m| {
-            m.iter().map(|(k, v)| {
-                (k.intern(interner), interner.get_or_intern(v).to_usize())
-            }).collect()
-        }).collect()
-    }
+        Ortho {
+            nodes: self
+                .nodes
+                .iter()
+                .map(|m| {
+                    m.iter()
+                        .map(|(k, v)| (k.intern(interner), interner.get_or_intern(v).to_usize()))
+                        .collect()
+                })
+                .collect(),
+        }
     }
 }
 
-#[derive(PartialEq, Eq, Hash, Debug, PartialOrd, Ord, Clone)]
+#[derive(PartialEq, Eq, Hash, Debug, PartialOrd, Ord, Clone, Serialize, Deserialize)]
 pub struct LiteralMultiSet {
     set: BTreeMap<String, usize>,
 }
@@ -178,8 +194,11 @@ mod tests {
         let mut interner = StringInterner::default();
         expected.insert(interner.get_or_intern("a".to_string()).to_usize());
         expected.insert(interner.get_or_intern("a".to_string()).to_usize());
-        
-        assert_eq!(expected, expected.unintern(&mut interner).intern(&mut interner))
+
+        assert_eq!(
+            expected,
+            expected.unintern(&mut interner).intern(&mut interner)
+        )
     }
 
     #[test]
@@ -191,7 +210,38 @@ mod tests {
             interner.get_or_intern("c").to_usize(),
             interner.get_or_intern("d").to_usize(),
         );
-        
+
         assert_eq!(ortho, ortho.unintern(&mut interner).intern(&mut interner))
+    }
+
+    #[test]
+    fn multiset_serializes() {
+        let mut expected = MultiSet::new();
+        let mut interner = StringInterner::default();
+        expected.insert(interner.get_or_intern("a".to_string()).to_usize());
+        expected.insert(interner.get_or_intern("a".to_string()).to_usize());
+
+        let uninterned = expected.unintern(&mut interner);
+        let serialized = serde_yaml::to_string(&uninterned).unwrap();
+        let deserialized: LiteralMultiSet = serde_yaml::from_str(&serialized).unwrap();
+        assert_eq!(uninterned, deserialized);
+    }
+
+    #[test]
+    fn ortho_serializes() {
+        let mut interner = StringInterner::default();
+
+        let ortho = Ortho::new(
+            interner.get_or_intern("a").to_usize(),
+            interner.get_or_intern("b").to_usize(),
+            interner.get_or_intern("c").to_usize(),
+            interner.get_or_intern("d").to_usize(),
+        );
+
+        let literal_ortho = ortho.unintern(&mut interner);
+        let serialized = serde_yaml::to_string(&literal_ortho).unwrap();
+        let deserialized: LiteralOrtho = serde_yaml::from_str(&serialized).unwrap();
+
+        assert_eq!(literal_ortho, deserialized);
     }
 }

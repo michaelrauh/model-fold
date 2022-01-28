@@ -1,7 +1,10 @@
 use nohash_hasher::IntMap;
 use nohash_hasher::IntSet;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::fs::File;
+use std::io::Read;
 use string_interner::StringInterner;
 use string_interner::Symbol;
 
@@ -29,6 +32,7 @@ pub struct Config {
     backward: IntMap<usize, IntSet<usize>>,
 }
 
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct LiteralConfig {
     vocabulary: HashSet<String>,
     forward: HashMap<String, HashSet<String>>,
@@ -37,7 +41,8 @@ pub struct LiteralConfig {
 
 impl LiteralConfig {
     pub fn from_raw(raw: String) -> LiteralConfig {
-        Self::new(clean_sentences(raw))
+        let res = Self::new(clean_sentences(raw));
+        res
     }
 
     pub fn new(sentences: Vec<Vec<String>>) -> LiteralConfig {
@@ -70,19 +75,31 @@ impl LiteralConfig {
         }
     }
 
-    fn save() {}
+    pub fn save(&self, mut target: File) {
+        std::io::Write::write_fmt(
+            &mut target,
+            format_args!("{}", serde_yaml::to_string(&self).unwrap()),
+        )
+        .unwrap();
+    }
 
     fn merge(&mut self, other: LiteralConfig) {
         for x in other.vocabulary {
             self.vocabulary.insert(x);
         }
-        
+
         for (k, v) in other.forward {
-            self.forward.entry(k).or_insert_with(HashSet::default).extend(v);
+            self.forward
+                .entry(k)
+                .or_insert_with(HashSet::default)
+                .extend(v);
         }
 
         for (k, v) in other.backward {
-            self.backward.entry(k).or_insert_with(HashSet::default).extend(v);
+            self.backward
+                .entry(k)
+                .or_insert_with(HashSet::default)
+                .extend(v);
         }
     }
 
@@ -116,7 +133,11 @@ impl LiteralConfig {
         new_hm
     }
 
-    fn load() {}
+    pub fn load(mut source: File) -> LiteralConfig {
+        let mut contents = String::new();
+        source.read_to_string(&mut contents).unwrap();
+        serde_yaml::from_str(&contents).unwrap()
+    }
 }
 
 impl Config {
@@ -141,7 +162,12 @@ impl Config {
 
 #[cfg(test)]
 mod tests {
-    use std::hash::Hash;
+    use std::{
+        fs,
+        hash::Hash,
+        io::{Seek, SeekFrom},
+        path,
+    };
 
     use super::*;
 
@@ -218,5 +244,20 @@ mod tests {
         assert_eq!(res.backward.len(), 6);
         assert_eq!(config.backward.len(), 3);
         assert_eq!(config2.backward.len(), 3);
+    }
+
+    #[test]
+    fn it_saves_and_loads() {
+        let filename = "temp.yaml";
+        let literal_config = LiteralConfig::from_raw("a b. c d. a c. b d.".to_string());
+
+        let f = File::create(filename).unwrap();
+        literal_config.save(f);
+
+        let f2 = File::open(filename).unwrap();
+
+        let res = LiteralConfig::load(f2);
+        fs::remove_file(filename).unwrap();
+        assert_eq!(literal_config, res);
     }
 }

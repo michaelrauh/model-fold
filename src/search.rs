@@ -1,12 +1,12 @@
+use crate::config::LiteralConfig;
 use crate::ex_nihilo::create;
 use crate::ortho::LiteralOrtho;
+use crate::repo::LiteralRepo;
 use crate::repo::Repo;
 use crate::Config;
 use crate::Ortho;
 use string_interner::StringInterner;
 use string_interner::Symbol;
-use crate::repo::LiteralRepo;
-use crate::config::LiteralConfig;
 
 pub fn search(input: String) -> (LiteralRepo, StringInterner, LiteralConfig) {
     let mut interner = StringInterner::default();
@@ -19,7 +19,7 @@ pub fn search(input: String) -> (LiteralRepo, StringInterner, LiteralConfig) {
             repo.add(find);
         }
     }
-    
+
     (repo.unintern(&interner), interner, literal_config)
 }
 

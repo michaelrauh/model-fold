@@ -2,12 +2,13 @@ use crate::ortho::LiteralMultiSet;
 use crate::ortho::LiteralOrtho;
 use crate::ortho::MultiSet;
 use crate::ortho::Ortho;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::collections::HashMap;
-use std::collections::btree_map::Iter;
+use std::fs::File;
+use std::io::Read;
 use string_interner::StringInterner;
 use string_interner::Symbol;
-use std::iter::Filter;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Repo {
@@ -17,9 +18,10 @@ pub struct Repo {
 
 impl Repo {
     pub fn set_subract(&self, from: BTreeSet<Ortho>) -> BTreeSet<Ortho> {
-        from.iter().filter(|&o| { 
-            self.find_by_size_and_origin(o.size(), o.origin()).is_none()
-        }).cloned().collect()
+        from.iter()
+            .filter(|&o| self.find_by_size_and_origin(o.size(), o.origin()).is_none())
+            .cloned()
+            .collect()
     }
 
     pub fn len(&self) -> usize {
@@ -87,7 +89,7 @@ impl Repo {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct LiteralRepo {
     origin: HashMap<(LiteralMultiSet, String), BTreeSet<LiteralOrtho>>,
     hops: HashMap<(LiteralMultiSet, String), BTreeSet<LiteralOrtho>>,
@@ -119,9 +121,19 @@ impl LiteralRepo {
             .collect()
     }
 
-    pub fn save(&self) {}
+    pub fn save(&self, mut target: File) {
+        std::io::Write::write_fmt(
+            &mut target,
+            format_args!("{}", serde_yaml::to_string(&self).unwrap()),
+        )
+        .unwrap();
+    }
 
-    pub fn load(&self) {}
+    pub fn load(mut source: File) -> LiteralRepo {
+        let mut contents = String::new();
+        source.read_to_string(&mut contents).unwrap();
+        serde_yaml::from_str(&contents).unwrap()
+    }
 
     pub fn merge(&mut self, other: LiteralRepo) {
         for x in other.origin.iter() {
@@ -142,6 +154,8 @@ impl LiteralRepo {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+
     use super::*;
 
     #[test]
@@ -266,5 +280,31 @@ mod tests {
         assert_eq!(res.hops.len(), 4);
         assert_eq!(repo.hops.len(), 2);
         assert_eq!(repo2.hops.len(), 2);
+    }
+
+    #[test]
+    fn it_saves_and_loads() {
+        let filename = "temp_two.yaml";
+        let mut interner = StringInterner::default();
+        let mut repo = Repo::new();
+        let ortho = Ortho::new(
+            interner.get_or_intern("a").to_usize(),
+            interner.get_or_intern("b").to_usize(),
+            interner.get_or_intern("c").to_usize(),
+            interner.get_or_intern("d").to_usize(),
+        );
+
+        repo.add(ortho.clone());
+
+        let uninterned = repo.unintern(&interner);
+
+        let f = File::create(filename).unwrap();
+        uninterned.save(f);
+
+        let f2 = File::open(filename).unwrap();
+
+        let res = LiteralRepo::load(f2);
+        fs::remove_file(filename).unwrap();
+        assert_eq!(uninterned, res);
     }
 }
