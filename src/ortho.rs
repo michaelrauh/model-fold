@@ -79,14 +79,14 @@ pub struct LiteralOrtho {
 }
 
 impl LiteralOrtho {
-    pub fn intern(&self, interner: &mut StringInterner) -> Ortho {
+    pub fn intern(&self, interner: &StringInterner) -> Ortho {
         Ortho {
             nodes: self
                 .nodes
                 .iter()
                 .map(|m| {
                     m.iter()
-                        .map(|(k, v)| (k.intern(interner), interner.get_or_intern(v).to_usize()))
+                        .map(|(k, v)| (k.intern(interner), interner.get(v).unwrap().to_usize()))
                         .collect()
                 })
                 .collect(),
@@ -100,12 +100,12 @@ pub struct LiteralMultiSet {
 }
 
 impl LiteralMultiSet {
-    pub fn intern(&self, interner: &mut StringInterner) -> MultiSet {
+    pub fn intern(&self, interner: &StringInterner) -> MultiSet {
         MultiSet {
             set: self
                 .set
                 .iter()
-                .map(|(k, v)| (interner.get_or_intern(k.clone()).to_usize(), *v))
+                .map(|(k, v)| (interner.get(k.clone()).unwrap().to_usize(), *v))
                 .collect(),
         }
     }

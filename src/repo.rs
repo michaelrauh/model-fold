@@ -96,7 +96,7 @@ pub struct LiteralRepo {
 }
 
 impl LiteralRepo {
-    pub fn intern(&self, interner: &mut StringInterner) -> Repo {
+    pub fn intern(&self, interner: &StringInterner) -> Repo {
         Repo {
             origin: Self::intern_underlying(&self.origin, interner),
             hops: Self::intern_underlying(&self.hops, interner),
@@ -105,16 +105,13 @@ impl LiteralRepo {
 
     fn intern_underlying(
         underlying: &HashMap<(MultiSet, String), BTreeSet<LiteralOrtho>>,
-        interner: &mut StringInterner,
+        interner: &StringInterner,
     ) -> HashMap<(MultiSet, usize), BTreeSet<Ortho>> {
         underlying
             .iter()
             .map(|(k, v)| {
                 (
-                    (
-                        k.0.clone(),
-                        interner.get(k.1.clone()).unwrap().to_usize(),
-                    ),
+                    (k.0.clone(), interner.get(k.1.clone()).unwrap().to_usize()),
                     v.iter().map(|v| v.intern(interner)).collect(),
                 )
             })

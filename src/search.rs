@@ -33,7 +33,13 @@ pub fn search(input: String, config_filename: &str, repo_filename: &str) {
 
         make_atoms(&current_config, &mut current_repo);
 
-        save_to_disk(&mut literal_config, &mut new_interner, &mut current_repo, config_filename, repo_filename);
+        save_to_disk(
+            &mut literal_config,
+            &mut new_interner,
+            &mut current_repo,
+            config_filename,
+            repo_filename,
+        );
     } else {
         let mut interner = StringInterner::default();
         let mut literal_config = LiteralConfig::from_raw(input);
@@ -41,7 +47,13 @@ pub fn search(input: String, config_filename: &str, repo_filename: &str) {
 
         let mut repo = Repo::new();
         make_atoms(&config, &mut repo);
-        save_to_disk(&mut literal_config, &mut interner, &mut repo, config_filename, repo_filename);
+        save_to_disk(
+            &mut literal_config,
+            &mut interner,
+            &mut repo,
+            config_filename,
+            repo_filename,
+        );
     }
 }
 
@@ -51,8 +63,16 @@ fn load_from_disk(config_filename: &str, repo_filename: &str) -> (LiteralConfig,
     (old_config, old_repo)
 }
 
-fn save_to_disk(literal_config: &mut LiteralConfig, new_interner: &mut StringInterner, current_repo: &mut Repo, config_filename: &str, repo_filename: &str) {
-    current_repo.unintern(&new_interner).save(File::create(repo_filename).unwrap());
+fn save_to_disk(
+    literal_config: &mut LiteralConfig,
+    new_interner: &mut StringInterner,
+    current_repo: &mut Repo,
+    config_filename: &str,
+    repo_filename: &str,
+) {
+    current_repo
+        .unintern(&new_interner)
+        .save(File::create(repo_filename).unwrap());
     literal_config.save(File::create(config_filename).unwrap());
 }
 
@@ -66,35 +86,42 @@ fn make_atoms(config: &Config, repo: &mut Repo) {
 
 #[cfg(test)]
 mod tests {
-    use crate::repo;
-
     use super::*;
 
     #[test]
     fn it_advances() {
         // todo question references. Some things can just be consumed. This would make sense to do once search is done
-        // todo question mut interner in places - arguably only mutate for config
         // todo question collect calls
         // todo question collecting to a set instead of using iter
-        
+
         let config_filename = "test_config.yaml";
         let repo_filename = "test_repo.yaml";
-        search("a b. c d. a c. b d. i k. j l.".to_string(), config_filename, repo_filename);
+        search(
+            "a b. c d. a c. b d. i k. j l.".to_string(),
+            config_filename,
+            repo_filename,
+        );
         let mut first_interner = StringInterner::default();
-        let first_config = LiteralConfig::load(File::open(config_filename).unwrap()).intern(&mut first_interner);
-        let first_repo = LiteralRepo::load(File::open(repo_filename).unwrap()).intern(&mut first_interner);
+        LiteralConfig::load(File::open(config_filename).unwrap()).intern(&mut first_interner);
+        let first_repo =
+            LiteralRepo::load(File::open(repo_filename).unwrap()).intern(&first_interner);
 
         assert_eq!(first_repo.len(), 1);
 
-        search("e f. g h. e g. f h. i j. k l.".to_string(), config_filename, repo_filename);
+        search(
+            "e f. g h. e g. f h. i j. k l.".to_string(),
+            config_filename,
+            repo_filename,
+        );
 
         let mut second_interner = StringInterner::default();
-        let second_config = LiteralConfig::load(File::open(config_filename).unwrap()).intern(&mut second_interner);
-        let second_repo = LiteralRepo::load(File::open(repo_filename).unwrap()).intern(&mut second_interner);
+        LiteralConfig::load(File::open(config_filename).unwrap()).intern(&mut second_interner);
+        let second_repo =
+            LiteralRepo::load(File::open(repo_filename).unwrap()).intern(&second_interner);
 
         assert_eq!(second_repo.len(), 3);
 
         std::fs::remove_file(config_filename).unwrap();
         std::fs::remove_file(repo_filename).unwrap();
     }
-} 
+}
