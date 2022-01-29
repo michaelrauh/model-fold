@@ -41,8 +41,7 @@ pub struct LiteralConfig {
 
 impl LiteralConfig {
     pub fn from_raw(raw: String) -> LiteralConfig {
-        let res = Self::new(clean_sentences(raw));
-        res
+        Self::new(clean_sentences(raw))
     }
 
     pub fn new(sentences: Vec<Vec<String>>) -> LiteralConfig {

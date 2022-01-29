@@ -60,14 +60,14 @@ fn save_to_disk(
     repo_filename: &str,
 ) {
     current_repo
-        .unintern(&interner)
+        .unintern(interner)
         .save(File::create(repo_filename).unwrap());
     literal_config.save(File::create(config_filename).unwrap());
 }
 
 fn make_atoms(config: &Config, repo: &mut Repo) {
     for a in config.iter() {
-        for find in create(&config, &repo, *a) {
+        for find in create(config, repo, *a) {
             repo.add(find);
         }
     }

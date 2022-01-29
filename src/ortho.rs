@@ -154,6 +154,12 @@ impl MultiSet {
     }
 }
 
+impl Default for MultiSet {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
 

@@ -78,13 +78,13 @@ impl Repo {
     pub fn add(&mut self, ortho: Ortho) {
         self.origin
             .entry((ortho.size(), ortho.origin()))
-            .or_insert(BTreeSet::default())
+            .or_insert_with(BTreeSet::default)
             .insert(ortho.clone());
 
-        for hop in ortho.clone().hop() {
+        for hop in ortho.hop() {
             self.hops
                 .entry((ortho.size(), *hop))
-                .or_insert(BTreeSet::default())
+                .or_insert_with(BTreeSet::default)
                 .insert(ortho.clone());
         }
     }
