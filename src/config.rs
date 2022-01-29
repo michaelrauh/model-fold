@@ -51,6 +51,9 @@ impl LiteralConfig {
         let mut backward = HashMap::default();
 
         for sentence in sentences {
+            if sentence.len() < 2 {
+                continue;
+            }
             for i in 0..sentence.len() - 1 {
                 let word = sentence[i].clone();
                 let next_word = sentence[i + 1].clone();
@@ -162,9 +165,7 @@ impl Config {
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        fs
-    };
+    use std::fs;
 
     use super::*;
 
