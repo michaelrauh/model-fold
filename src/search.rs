@@ -2,13 +2,10 @@ use std::fs::File;
 
 use crate::config::LiteralConfig;
 use crate::ex_nihilo::create;
-use crate::ortho::LiteralOrtho;
 use crate::repo::LiteralRepo;
 use crate::repo::Repo;
 use crate::Config;
-use crate::Ortho;
 use string_interner::StringInterner;
-use string_interner::Symbol;
 
 pub fn search(input: String, config_filename: &str, repo_filename: &str) {
     if std::path::Path::new(config_filename).exists() {
@@ -90,10 +87,6 @@ mod tests {
 
     #[test]
     fn it_advances() {
-        // todo question references. Some things can just be consumed. This would make sense to do once search is done
-        // todo question collect calls
-        // todo question collecting to a set instead of using iter
-
         let config_filename = "test_config.yaml";
         let repo_filename = "test_repo.yaml";
         search(

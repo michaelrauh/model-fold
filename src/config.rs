@@ -163,10 +163,7 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use std::{
-        fs,
-        hash::Hash,
-        io::{Seek, SeekFrom},
-        path,
+        fs
     };
 
     use super::*;

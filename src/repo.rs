@@ -1,4 +1,3 @@
-use crate::ortho::LiteralMultiSet;
 use crate::ortho::LiteralOrtho;
 use crate::ortho::MultiSet;
 use crate::ortho::Ortho;
@@ -24,6 +23,7 @@ impl Repo {
             .collect()
     }
 
+    #[allow(dead_code)]
     pub fn len(&self) -> usize {
         self.origin.len()
     }
@@ -36,6 +36,7 @@ impl Repo {
         self.origin.get(&(size, origin))
     }
 
+    #[allow(dead_code)]
     pub fn find_by_size_and_hop(&self, size: MultiSet, origin: usize) -> Option<&BTreeSet<Ortho>> {
         self.hops.get(&(size, origin))
     }

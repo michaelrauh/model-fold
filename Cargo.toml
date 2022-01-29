@@ -10,3 +10,9 @@ string-interner = "0.13.0"
 nohash-hasher = "0.2.0"
 serde = { version = "1.0.136", features = ["derive"] }
 serde_yaml = "0.8.23"
+
+[profile.release] 
+debug = true
+
+[profile.bench]
+debug = true
