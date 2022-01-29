@@ -1,4 +1,3 @@
-use std::fs;
 use std::fs::File;
 
 use crate::config::LiteralConfig;
@@ -10,30 +9,22 @@ use string_interner::StringInterner;
 
 pub fn search(input: String, config_filename: &str, repo_filename: &str) {
     if std::path::Path::new(config_filename).exists() {
-        let mut interner = StringInterner::default();
         let mut literal_config = LiteralConfig::from_raw(input);
-        let config = literal_config.intern(&mut interner);
-        let mut repo = Repo::new();
-
-        make_atoms(&config, &mut repo);
-
-        let mut literal_repo = repo.unintern(&interner);
 
         let (old_config, old_repo) = load_from_disk(config_filename, repo_filename);
 
-        literal_repo.merge(old_repo);
         literal_config.merge(old_config);
 
-        let mut new_interner = StringInterner::default();
+        let mut interner = StringInterner::default();
 
-        let current_config = literal_config.intern(&mut new_interner);
-        let mut current_repo = literal_repo.intern(&mut new_interner);
+        let current_config = literal_config.intern(&mut interner);
+        let mut current_repo = old_repo.intern(&interner);
 
         make_atoms(&current_config, &mut current_repo);
 
         save_to_disk(
             &mut literal_config,
-            &mut new_interner,
+            &interner,
             &mut current_repo,
             config_filename,
             repo_filename,
@@ -47,7 +38,7 @@ pub fn search(input: String, config_filename: &str, repo_filename: &str) {
         make_atoms(&config, &mut repo);
         save_to_disk(
             &mut literal_config,
-            &mut interner,
+            &interner,
             &mut repo,
             config_filename,
             repo_filename,
@@ -63,13 +54,13 @@ fn load_from_disk(config_filename: &str, repo_filename: &str) -> (LiteralConfig,
 
 fn save_to_disk(
     literal_config: &mut LiteralConfig,
-    new_interner: &mut StringInterner,
+    interner: &StringInterner,
     current_repo: &mut Repo,
     config_filename: &str,
     repo_filename: &str,
 ) {
     current_repo
-        .unintern(&new_interner)
+        .unintern(&interner)
         .save(File::create(repo_filename).unwrap());
     literal_config.save(File::create(config_filename).unwrap());
 }

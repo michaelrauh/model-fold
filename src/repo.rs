@@ -132,22 +132,6 @@ impl LiteralRepo {
         source.read_to_string(&mut contents).unwrap();
         serde_yaml::from_str(&contents).unwrap()
     }
-
-    pub fn merge(&mut self, other: LiteralRepo) {
-        for x in other.origin.iter() {
-            self.origin
-                .entry(x.0.clone())
-                .or_insert(BTreeSet::default())
-                .extend(x.1.iter().cloned());
-        }
-
-        for x in other.hops.iter() {
-            self.hops
-                .entry(x.0.clone())
-                .or_insert(BTreeSet::default())
-                .extend(x.1.iter().cloned());
-        }
-    }
 }
 
 #[cfg(test)]
@@ -242,42 +226,6 @@ mod tests {
         let res = repo.set_subract(target);
         assert_eq!(res.len(), 1);
         assert!(res.contains(&ortho2));
-    }
-
-    #[test]
-    fn it_can_be_merged() {
-        let mut interner = StringInterner::default();
-        let mut repo = Repo::new();
-        let mut repo2 = Repo::new();
-        let ortho = Ortho::new(
-            interner.get_or_intern("a").to_usize(),
-            interner.get_or_intern("b").to_usize(),
-            interner.get_or_intern("c").to_usize(),
-            interner.get_or_intern("d").to_usize(),
-        );
-
-        let ortho2 = Ortho::new(
-            interner.get_or_intern("e").to_usize(),
-            interner.get_or_intern("f").to_usize(),
-            interner.get_or_intern("g").to_usize(),
-            interner.get_or_intern("h").to_usize(),
-        );
-
-        repo.add(ortho.clone());
-        repo2.add(ortho2.clone());
-
-        let mut literal_repo = repo.unintern(&interner);
-        let literal_repo2 = repo2.unintern(&interner);
-
-        literal_repo.merge(literal_repo2.clone());
-        let res = literal_repo.intern(&mut interner);
-
-        assert_eq!(res.origin.len(), 2);
-        assert_eq!(repo.origin.len(), 1);
-        assert_eq!(repo2.origin.len(), 1);
-        assert_eq!(res.hops.len(), 4);
-        assert_eq!(repo.hops.len(), 2);
-        assert_eq!(repo2.hops.len(), 2);
     }
 
     #[test]
