@@ -12,7 +12,8 @@ serde = { version = "1.0.136", features = ["derive"] }
 serde_yaml = "0.8.23"
 
 [profile.release] 
-debug = true
-
-[profile.bench]
-debug = true
+opt-level = 3
+overflow-checks = false
+lto = true
+codegen-units = 1
+# panic = "abort"
